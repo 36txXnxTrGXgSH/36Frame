@@ -1,0 +1,40 @@
+# ------------------------------------------------------------------ environnements Python
+.venv/
+.venv-*/
+venv/
+__pycache__/
+*.py[cod]
+
+# ------------------------------------------------------------------ compilation (générés par compiler.ps1 / construire-linux.sh)
+build/
+dist/
+Linux/sortie/
+*.exe
+*.msi
+*.AppImage
+*.zip
+*.rar
+*.7z
+*.tar.gz
+# Les exécutables se publient dans les « Releases » GitHub, pas dans le dépôt.
+Portable/*
+!Portable/LISEZ-MOI.txt
+
+# ------------------------------------------------------------------ données personnelles
+# Réglages, favoris (chemins de vos fichiers) et miniatures de vos images (version portable)
+36Frame-donnees/
+config.json
+# Images de test : photos personnelles, captures de jeux, œuvres sous droits d'auteur
+Image exemple/
+images-test/
+
+# ------------------------------------------------------------------ divers
+*.log
+*.tmp
+*.bak
+*.paint
+.idea/
+.vscode/
+Thumbs.db
+desktop.ini
+.DS_Store

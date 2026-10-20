@@ -1,0 +1,5 @@
+# Versions testées (figées pour que chacun obtienne le même programme).
+# Mettre à jour régulièrement : ces bibliothèques décodent des images venant de partout
+# (libwebp, libtiff, libjpeg, libpng… dans Qt ; AVIF dans Pillow), d'où l'importance des correctifs.
+PySide6-Essentials==6.12.0
+Pillow==12.3.0

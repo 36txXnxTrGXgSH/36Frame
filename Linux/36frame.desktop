@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=36Frame
+GenericName=Visionneuse d'images
+Comment=Liseuse d'images inspirée de Picasa
+Exec=36FRAME_EXEC %F
+Icon=36frame
+Terminal=false
+Categories=Graphics;Viewer;2DGraphics;RasterGraphics;
+MimeType=image/jpeg;image/png;image/gif;image/webp;image/bmp;image/tiff;image/avif;image/x-icon;image/vnd.microsoft.icon;image/x-tga;image/x-portable-pixmap;image/svg+xml;
+StartupWMClass=36Frame
+Keywords=photo;image;picture;viewer;gif;webp;

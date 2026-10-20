@@ -1,0 +1,23 @@
+﻿36Frame - versions portables (aucune installation)
+==================================================
+
+Deux versions, au choix :
+
+1. 36Frame-Portable-rapide.zip   (RECOMMANDE, surtout sur un PC portable)
+   Decompressez le zip ou vous voulez (cle USB, autre PC), puis lancez
+   36Frame-Portable\36Frame-Portable.exe.
+   Aussi rapide que la version installee : une autre image s'ouvre en ~0,2 s.
+
+2. 36Frame-Portable.exe   (un seul fichier)
+   Pratique a copier, mais il se decompresse a chaque lancement : ouvrir une
+   autre image depuis l'Explorateur prend ~1 s (plus sur un PC portable).
+
+Dans les deux cas :
+- Reglages, favoris et miniatures sont ranges dans "36Frame-donnees", a cote de
+  l'exe. Rien n'est ecrit ailleurs sur le PC. Pour garder vos reglages, copiez
+  aussi ce dossier.
+- Visionneuse par defaut sans installer : Configuration > "Visionneuse par
+  defaut de Windows" > "Definir 36Frame par defaut...".
+- Au premier lancement sur un PC, Windows peut afficher "Windows a protege
+  votre ordinateur" : Informations complementaires > Executer quand meme
+  (l'exe n'est pas signe numeriquement).

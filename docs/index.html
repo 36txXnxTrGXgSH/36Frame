@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>36Frame — la liseuse d'images inspirée de Picasa, pour Windows</title>
+<meta name="description" content="36Frame : une liseuse d'images légère pour Windows, inspirée de Picasa. La fenêtre épouse l'image, zoom fluide, Mosaïque Dossier, GIF et WebP animés, images détourées, plusieurs fenêtres. Sans compte, sans connexion internet.">
+<meta property="og:title" content="36Frame — la liseuse d'images inspirée de Picasa">
+<meta property="og:description" content="La fenêtre épouse l'image, zoom fluide, Mosaïque Dossier, GIF et WebP animés. Pour Windows, en français, sans internet.">
+<meta property="og:image" content="https://36txxnxtrgxgsh.github.io/36Frame/images/01-accueil.png">
+<style>
+  :root {
+    --fond: #111215;
+    --fond-2: #17181d;
+    --carte: #1d1f25;
+    --trait: #2c2f37;
+    --texte: #eceef2;
+    --texte-2: #a8adb8;
+    --accent: #ffaa28;
+    --accent-2: #3d6db5;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--fond);
+    color: var(--texte);
+    font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+  }
+  a { color: var(--accent); }
+  .page { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---- en-tête */
+  header.hero {
+    background:
+      radial-gradient(900px 500px at 80% 0%, rgba(255, 170, 40, .16), transparent 70%),
+      radial-gradient(700px 420px at 0% 100%, rgba(61, 109, 181, .16), transparent 70%),
+      var(--fond);
+    border-bottom: 1px solid var(--trait);
+  }
+  .hero .page { padding-top: 72px; padding-bottom: 56px; }
+  .marque { font-size: 15px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+  h1 { font-size: clamp(34px, 5vw, 56px); line-height: 1.08; margin: 12px 0 18px; letter-spacing: -.02em; max-width: 16em; }
+  .accroche { font-size: 20px; color: var(--texte-2); max-width: 40em; margin: 0 0 28px; }
+  .boutons { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+  .bouton {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 22px; border-radius: 999px;
+    font-weight: 650; text-decoration: none; font-size: 16px;
+  }
+  .bouton.plein { background: var(--accent); color: #241400; }
+  .bouton.plein:hover { background: #ffc15c; }
+  .bouton.contour { border: 1px solid var(--trait); color: var(--texte); }
+  .bouton.contour:hover { border-color: var(--accent); }
+  .pastilles { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0 0 40px; list-style: none; }
+  .pastilles li {
+    font-size: 14px; color: var(--texte-2);
+    border: 1px solid var(--trait); border-radius: 999px; padding: 5px 12px;
+  }
+  .ecran {
+    display: block; width: 100%; height: auto;
+    border-radius: 14px; border: 1px solid var(--trait);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+    background: var(--fond-2);
+  }
+
+  /* ---- sections */
+  section { padding: 72px 0; border-bottom: 1px solid var(--trait); }
+  section:nth-of-type(even) { background: var(--fond-2); }
+  .duo { display: grid; grid-template-columns: 1.15fr .85fr; gap: 44px; align-items: center; }
+  .duo.inverse > :first-child { order: 2; }
+  h2 { font-size: clamp(26px, 3.2vw, 36px); line-height: 1.15; margin: 0 0 14px; letter-spacing: -.01em; }
+  .chapeau { color: var(--texte-2); font-size: 18px; margin: 0 0 18px; }
+  ul.points { margin: 0; padding-left: 1.1em; }
+  ul.points li { margin: 6px 0; }
+  ul.points li::marker { color: var(--accent); }
+  kbd {
+    font: 13px/1 ui-monospace, Consolas, monospace;
+    padding: 3px 7px; border-radius: 6px;
+    border: 1px solid var(--trait); border-bottom-width: 2px; background: var(--carte); color: var(--texte);
+  }
+  .cartes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 28px; }
+  .carte { background: var(--carte); border: 1px solid var(--trait); border-radius: 14px; padding: 20px 22px; }
+  .carte h3 { margin: 0 0 8px; font-size: 18px; }
+  .carte p { margin: 0; color: var(--texte-2); font-size: 16px; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 16px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--trait); vertical-align: top; }
+  th { color: var(--texte-2); font-weight: 600; }
+  td:first-child { white-space: nowrap; }
+
+  .note {
+    border-left: 3px solid var(--accent); background: var(--carte);
+    padding: 14px 18px; border-radius: 0 10px 10px 0; color: var(--texte-2); margin-top: 22px;
+  }
+
+  footer { padding: 40px 0 60px; color: var(--texte-2); font-size: 15px; }
+
+  @media (max-width: 860px) {
+    .duo, .cartes { grid-template-columns: 1fr; }
+    .duo.inverse > :first-child { order: 0; }
+    section { padding: 52px 0; }
+    td:first-child { white-space: normal; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="page">
+    <div class="marque">36Frame</div>
+    <h1>La liseuse d'images inspirée de Picasa, pour Windows</h1>
+    <p class="accroche">Double-cliquez sur une photo : la fenêtre prend la taille de l'image, rien de plus.
+      Une barre d'outils discrète, un zoom fluide, tout un dossier en mosaïque, les GIF et WebP animés,
+      les images détourées posées sur votre bureau. Léger, en français, et sans jamais se connecter à internet.</p>
+    <div class="boutons">
+      <a class="bouton plein" href="https://github.com/36txXnxTrGXgSH/36Frame/releases/latest">Télécharger pour Windows</a>
+      <a class="bouton contour" href="https://github.com/36txXnxTrGXgSH/36Frame">Voir le code source</a>
+    </div>
+    <ul class="pastilles">
+      <li>JPEG · PNG · WebP · GIF · AVIF · TIFF · BMP · PSD · SVG…</li>
+      <li>Aucune connexion internet</li>
+      <li>Sans compte</li>
+      <li>Installation sans droits administrateur</li>
+      <li>Version portable</li>
+      <li>En français</li>
+    </ul>
+    <img class="ecran" src="images/01-accueil.png" width="1600" height="900"
+         alt="36Frame affiche un paysage : la fenêtre a exactement la taille de l'image, la barre d'outils et les miniatures du dossier apparaissent en bas">
+  </div>
+</header>
+
+<main>
+
+<section id="adaptatif">
+  <div class="page duo">
+    <img class="ecran" src="captures/liseuse.jpg" width="1600" height="900" loading="lazy"
+         alt="La liseuse : la barre d'outils et la bande de miniatures au survol du bas de la fenêtre">
+    <div>
+      <h2>La fenêtre épouse l'image</h2>
+      <p class="chapeau">Pas de cadre, pas de fond gris : seulement votre image, à sa taille réelle.</p>
+      <ul class="points">
+        <li>Une grande photo est réduite pour tenir dans l'écran (90 % par défaut, réglable).</li>
+        <li><strong>La barre d'outils ne bouge pas</strong> d'une image à l'autre : enchaînez les photos à la molette sur les miniatures.</li>
+        <li><kbd>Ctrl</kbd> + molette agrandit ou rétrécit la fenêtre <em>et</em> l'image ensemble.</li>
+        <li>Tirez un bord : l'image suit, en gardant ses proportions.</li>
+        <li>Vous préférez l'ancien style ? Le <strong>mode PICASA</strong> (fenêtre fixe, fond gris) est dans la configuration.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="zoom">
+  <div class="page duo inverse">
+    <img class="ecran" src="images/02-zoom.jpg" width="1600" height="900" loading="lazy"
+         alt="Un panorama de 8000 pixels zoomé à 100 % sur un quartier, avec la pastille « 100% »">
+    <div>
+      <h2>Un zoom fluide et précis</h2>
+      <p class="chapeau">Même une photo de 40 millions de pixels se zoome sans à-coup.</p>
+      <ul class="points">
+        <li>Molette = zoom autour du curseur, animé, 12 % par cran.</li>
+        <li>Une pastille affiche le pourcentage : <strong>100 % = un pixel de l'image pour un pixel de l'écran</strong>, même avec la mise à l'échelle Windows à 125 ou 150 %.</li>
+        <li><kbd>1:1</kbd> pour la taille réelle, un second appui pour revenir à l'ajustement.</li>
+        <li>Glissez l'image pour la parcourir quand elle est zoomée.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="mosaique-dossier">
+  <div class="page">
+    <h2>Mosaïque Dossier : tout un dossier d'un coup d'œil</h2>
+    <p class="chapeau">Clic droit → <em>Mosaïque Dossier</em> (ou <kbd>Ctrl</kbd>+<kbd>G</kbd>) : toutes les images en plein écran, en rangées ajustées, sans rien recadrer.</p>
+    <img class="ecran" src="captures/mosaique-dossier.jpg" width="1720" height="968" loading="lazy"
+         alt="La Mosaïque Dossier : douze images en rangées ajustées, l'image ouverte entourée en orange">
+    <div class="cartes">
+      <div class="carte"><h3>Défilement amorti</h3><p>La molette fait défiler la suite du dossier en douceur ; <kbd>Ctrl</kbd>+molette agrandit les vignettes. Vertical ou horizontal, au choix.</p></div>
+      <div class="carte"><h3>Panorama</h3><p>Un bouton fait défiler les images toutes seules, à la vitesse choisie. L'écran ne se met pas en veille pendant ce temps.</p></div>
+      <div class="carte"><h3>GIF et WebP animés</h3><p>Les animations bougent dans la mosaïque : toutes, ou seulement celle sous la souris. Décodées une seule fois, compressées en mémoire.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="fenetres">
+  <div class="page duo">
+    <img class="ecran" src="images/03-mosaique-fenetres.jpg" width="1600" height="900" loading="lazy"
+         alt="Cinq fenêtres 36Frame disposées automatiquement à l'écran par le bouton Mosaïque">
+    <div>
+      <h2>Plusieurs images côte à côte</h2>
+      <p class="chapeau">Chaque image ouverte depuis l'Explorateur arrive dans sa propre fenêtre — un seul programme tourne.</p>
+      <ul class="points">
+        <li>Le bouton <strong>Mosaïque</strong> range toutes les fenêtres à l'écran : optimale, en lignes, en colonnes, grille, cascade ou pêle-mêle.</li>
+        <li>Clic molette sur une miniature : l'image s'ouvre dans une nouvelle fenêtre.</li>
+        <li>Ouvrir une autre image prend environ 0,2 seconde : le programme n'est pas rechargé.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="detoure">
+  <div class="page duo inverse">
+    <img class="ecran" src="captures/image-detouree.jpg" width="900" height="900" loading="lazy"
+         alt="Une planète à fond transparent affichée par 36Frame : seul le sujet est visible, posé sur ce qui se trouve derrière la fenêtre">
+    <div>
+      <h2>Les images détourées, posées sur votre bureau</h2>
+      <p class="chapeau">Un PNG ou un WebP à fond transparent ? La fenêtre disparaît, seul le sujet reste.</p>
+      <ul class="points">
+        <li>On voit ce qu'il y a derrière : bureau, autre application… (ou damier, au choix).</li>
+        <li><strong>Épingler au premier plan</strong> (bouton punaise ou <kbd>T</kbd>) : l'image reste au-dessus de tout, même d'un jeu en plein écran fenêtré.</li>
+        <li>La fenêtre reste déplaçable en cliquant n'importe où sur l'image.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="dossiers">
+  <div class="page duo">
+    <img class="ecran" src="images/05-menu.jpg" width="1600" height="900" loading="lazy"
+         alt="Le menu des options de 36Frame ouvert d'un clic droit sur l'image">
+    <div>
+      <h2>Vos dossiers, vos favoris, vos outils</h2>
+      <ul class="points">
+        <li><strong>Plusieurs dossiers et leurs sous-dossiers</strong> réunis en une seule collection (sélection multiple dans la fenêtre de Windows).</li>
+        <li><strong>Favoris</strong> et dossiers de favoris à vous, chacun parcouru comme un dossier.</li>
+        <li><strong>Partager</strong> : e-mail avec la photo jointe, Discord, copier le fichier ou l'image.</li>
+        <li><strong>Ouvrir avec</strong> Paint, Photoshop, GIMP, Krita… détectés automatiquement.</li>
+        <li>Diaporama, rotation, impression, <strong>suppression vers la corbeille</strong> (récupérable) avec <kbd>Suppr</kbd>.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="reglages">
+  <div class="page duo inverse">
+    <img class="ecran" src="images/04-configuration.png" width="1035" height="740" loading="lazy"
+         alt="La fenêtre de configuration de 36Frame">
+    <div>
+      <h2>Tout se règle</h2>
+      <ul class="points">
+        <li>Mode adaptatif ou PICASA, taille maximale, fond des images détourées.</li>
+        <li>Teinte du plein écran, vitesse du diaporama et du Panorama, douceur du défilement.</li>
+        <li><strong>Visionneuse par défaut de Windows</strong> : cochez les formats (27 au choix), Windows demande une dernière validation d'un clic.</li>
+        <li>Vider le cache des miniatures en un bouton.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="raccourcis">
+  <div class="page">
+    <h2>Raccourcis</h2>
+    <table>
+      <tr><th>Geste / touche</th><th>Effet</th></tr>
+      <tr><td>Molette sur l'image</td><td>Zoom avant / arrière autour du curseur</td></tr>
+      <tr><td>Molette sur les miniatures</td><td>Image suivante (vers l'arrière) / précédente (vers l'avant)</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + molette</td><td>Fenêtre et image grandissent / rétrécissent ensemble</td></tr>
+      <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Image précédente / suivante</td></tr>
+      <tr><td>Double-clic, <kbd>F11</kbd></td><td>Plein écran ⇄ fenêtré</td></tr>
+      <tr><td><kbd>1</kbd> · <kbd>0</kbd> · <kbd>W</kbd></td><td>Taille réelle · ajuster · fenêtre à la taille de l'image</td></tr>
+      <tr><td><kbd>Espace</kbd></td><td>Diaporama (Panorama dans la Mosaïque Dossier)</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>G</kbd> · <kbd>Ctrl</kbd>+<kbd>M</kbd></td><td>Mosaïque Dossier · mosaïque des fenêtres</td></tr>
+      <tr><td><kbd>T</kbd> · <kbd>Ctrl</kbd>+<kbd>D</kbd> · <kbd>Suppr</kbd></td><td>Épingler au premier plan · favori · mettre à la corbeille</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd> · <kbd>Ctrl</kbd>+<kbd>Maj</kbd>+<kbd>O</kbd></td><td>Ouvrir une image · ouvrir des dossiers (sous-dossiers compris)</td></tr>
+    </table>
+  </div>
+</section>
+
+<section id="confiance">
+  <div class="page">
+    <h2>Léger, rapide, et rien ne quitte votre PC</h2>
+    <div class="cartes">
+      <div class="carte"><h3>Aucune connexion internet</h3><p>36Frame ne contacte aucun serveur : pas de compte, pas de statistiques, pas de mise à jour cachée. Réglages et miniatures restent sur votre PC.</p></div>
+      <div class="carte"><h3>Pensé pour les petites configurations</h3><p>Ouvrir l'image suivante depuis l'Explorateur : ~0,2 s. Le cache s'adapte à la mémoire du PC, et une animation cachée se met en pause.</p></div>
+      <div class="carte"><h3>Rien à installer en plus</h3><p>Installateur sans droits administrateur, ou version portable à décompresser (réglages rangés à côté de l'exe, rien ailleurs).</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="telecharger">
+  <div class="page">
+    <h2>Télécharger</h2>
+    <p class="chapeau">Windows 10 ou 11, 64 bits. Dans la page <a href="https://github.com/36txXnxTrGXgSH/36Frame/releases/latest">Releases</a> :</p>
+    <table>
+      <tr><th>Fichier</th><th>Pour qui</th></tr>
+      <tr><td><code>36Frame-Setup-x.y.z.exe</code></td><td>Installation classique (sans droits administrateur). Propose de faire de 36Frame la visionneuse par défaut.</td></tr>
+      <tr><td><code>36Frame-Portable-rapide.zip</code></td><td>Sans installation : à décompresser où vous voulez (clé USB…). Aussi rapide que la version installée.</td></tr>
+      <tr><td><code>36Frame-Portable.exe</code></td><td>Un seul fichier, sans installation ; un peu plus lent à l'ouverture de chaque image.</td></tr>
+    </table>
+    <div class="note">L'exécutable n'est pas signé numériquement : au premier lancement, Windows peut afficher
+      « Windows a protégé votre ordinateur ». Cliquez sur <em>Informations complémentaires</em>, puis <em>Exécuter quand même</em>.
+      Sous Linux, 36Frame se lance depuis le code source (voir le README).</div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="page">
+    36Frame — liseuse d'images en français, réalisée entièrement avec Claude, l'IA d'Anthropic.
+    Les images de cette page sont dessinées par programme (<code>outils/generer_exemples.py</code>, domaine public).
+    · <a href="https://github.com/36txXnxTrGXgSH/36Frame">Code source</a>
+    · <a href="https://36txxnxtrgxgsh.github.io/Portfolio-Github/">Mes autres projets</a>
+  </div>
+</footer>
+
+</body>
+</html>

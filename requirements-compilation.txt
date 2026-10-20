@@ -1,0 +1,3 @@
+# Pour fabriquer les exécutables (compiler.ps1, Linux/construire-linux.sh)
+-r requirements.txt
+pyinstaller==6.22.3

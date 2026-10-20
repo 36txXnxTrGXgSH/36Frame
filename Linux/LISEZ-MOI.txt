@@ -1,0 +1,22 @@
+36Frame - version Linux
+=======================
+
+Deux formes, au choix :
+
+1. AppImage (un seul fichier, aucune installation, equivalent du portable Windows)
+     chmod +x 36Frame-*-x86_64.AppImage
+     ./36Frame-*-x86_64.AppImage  [image]
+   Reglages : ~/.config/36Frame/   Miniatures : ~/.cache/36Frame/
+
+2. Archive tar.gz (installation pour l'utilisateur, avec entree dans le menu)
+     tar -xzf 36Frame-*-linux-x86_64.tar.gz
+     cd 36Frame-*
+     sh installer-linux.sh            (ou --defaut pour en faire la visionneuse par defaut)
+     sh installer-linux.sh --retirer  pour desinstaller
+
+Fonctionne sur les Linux 64 bits recents (Ubuntu 22.04+, Debian 12+, Fedora 38+, Mint 21+…).
+Le fond transparent (plein ecran, fenetre) demande un bureau avec compositeur (GNOME, KDE,
+Cinnamon, XFCE avec compositeur active). Sous Wayland, 36Frame passe automatiquement par
+XWayland pour pouvoir placer ses fenetres (Mosaique).
+
+Fabriquer ces fichiers (sur un Linux) : sh Linux/construire-linux.sh depuis le dossier 36Frame.
