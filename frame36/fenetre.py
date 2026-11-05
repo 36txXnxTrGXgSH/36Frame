@@ -6,7 +6,7 @@ import copy
 import os
 import sys
 
-from PySide6.QtCore import QElapsedTimer, QEvent, QFile, QPoint, QPointF, QRect, QSize, Qt, QThread, QTimer
+from PySide6.QtCore import QElapsedTimer, QEvent, QFile, QPoint, QPointF, QRect, QRectF, QSize, Qt, QThread, QTimer
 from PySide6.QtGui import QColor, QCursor, QGuiApplication, QImage, QKeySequence, QMovie, QShortcut
 from PySide6.QtWidgets import QApplication, QCheckBox, QFileDialog, QLabel, QMenu, QMessageBox, QWidget
 
@@ -80,6 +80,7 @@ class Liseuse(QWidget):
         # épingle (toujours au premier plan) : réaffirmée chaque seconde, car un jeu qui se
         # remet lui-même au premier plan passerait sinon devant
         self.epinglee = False
+        self.fige = False                # épingle « figée » : ni déplacement, ni zoom, ni redimensionnement
         self._redim_interne = False      # redimensionnement décidé par 36Frame (pas par la souris)
         self._ancre_bas: QPoint | None = None   # bas-centre fixe de la fenêtre (mode adaptatif)
         self._minuteur_epingle = QTimer(self, interval=1000, timeout=self._reaffirmer_epingle)
@@ -91,14 +92,14 @@ class Liseuse(QWidget):
     # ================================================================== câblage
     def _connecter(self):
         b = self.barre
-        b.zoom_plus.clicked.connect(lambda: self.vue.zoomer(1.25))
-        b.zoom_moins.clicked.connect(lambda: self.vue.zoomer(1 / 1.25))
-        b.un_un.clicked.connect(self.vue.basculer_un_un)
+        b.zoom_plus.clicked.connect(lambda: self.zoom_ensemble(1.25))
+        b.zoom_moins.clicked.connect(lambda: self.zoom_ensemble(1 / 1.25))
+        b.un_un.clicked.connect(self.un_un)
         b.recadrer.clicked.connect(self.ajuster_fenetre)
         b.epingle.clicked.connect(self.basculer_epingle)
         self.vue.zoom_change.connect(lambda _z: self._maj_recadrer())
-        self.vue.zoom_change.connect(lambda _z: self._suivre_dezoom())
-        self.vue.ctrl_molette.connect(self.redimensionner_ensemble)
+        self.vue.molette_fenetre.connect(self.redimensionner_ensemble)
+        self.vue.balayage.connect(self.aller_relatif)          # doigt, en plein écran
         b.precedent.clicked.connect(lambda: self.aller_relatif(-1))
         b.suivant.clicked.connect(lambda: self.aller_relatif(1))
         b.lecture.clicked.connect(self.basculer_diaporama)
@@ -133,10 +134,12 @@ class Liseuse(QWidget):
         r(["Left", "PgUp", "Up", "Backspace"], lambda: self.aller_relatif(-1))
         r("Home", lambda: self.aller(0))
         r("End", lambda: self.aller(len(self.chemins) - 1))
-        r(["+", "=", "Ctrl++", "Ctrl+="], lambda: self.vue.zoomer(1.25))
-        r(["-", "Ctrl+-"], lambda: self.vue.zoomer(1 / 1.25))
-        r(["1", "Ctrl+1"], self.vue.basculer_un_un)
-        r(["0", "Ctrl+0"], self.vue.ajuster)
+        r(["+", "="], lambda: self.zoom_ensemble(1.25))           # comme la molette
+        r(["-"], lambda: self.zoom_ensemble(1 / 1.25))
+        r(["Ctrl++", "Ctrl+="], lambda: self.zoom_image(1.25))     # comme Ctrl+molette : l'image seule
+        r(["Ctrl+-"], lambda: self.zoom_image(1 / 1.25))
+        r(["1", "Ctrl+1"], self.un_un)
+        r(["0", "Ctrl+0"], lambda: self.fige or self.vue.ajuster())
         r("W", self.ajuster_fenetre)
         r("T", self.basculer_epingle)
         r(["F11", "F", "Return", "Enter"], self.basculer_plein_ecran)
@@ -148,6 +151,7 @@ class Liseuse(QWidget):
         r("Ctrl+C", self.copier_image)
         r("Ctrl+Shift+C", self.copier_fichier)
         r("Ctrl+P", self.imprimer)
+        r("Ctrl+Shift+P", lambda: self.imprimer(apercu=True))
         r("Ctrl+O", self.dialogue_ouvrir)
         r("Ctrl+Shift+O", self.dialogue_dossier)
         r("Ctrl+E", lambda: self._chemin() and actions.afficher_dans_dossier(self._chemin()))
@@ -174,7 +178,7 @@ class Liseuse(QWidget):
         self.vue.lissage = c.lissage
         self.vue.ombre = c.ombre_image
         self.vue.mode_transparence = c.transparence
-        self.vue.ctrl_redimensionne = c.mode_affichage == "adaptatif"
+        self.vue.molette_redimensionne = c.mode_affichage == "adaptatif" and not self.plein_ecran
         self.barre.fond = c.barre_fond
         self.barre.update()
         self.vue._lisse = None
@@ -258,16 +262,6 @@ class Liseuse(QWidget):
         if not self._redim_interne:
             self._ancre_bas = None          # déplacée à la main : nouveau point d'ancrage
 
-    def _rect_autour(self, centre: QPoint, l: int, h: int) -> QRect:
-        """Rectangle l x h centré sur « centre », ramené dans l'écran."""
-        dispo = self._zone_ecran()
-        l, h = min(l, dispo.width()), min(h, dispo.height())
-        r = QRect(0, 0, l, h)
-        r.moveCenter(centre)
-        r.moveLeft(max(dispo.left(), min(r.left(), dispo.right() - l + 1)))
-        r.moveTop(max(dispo.top(), min(r.top(), dispo.bottom() - h + 1)))
-        return r
-
     def taille_adaptee(self, taille_px: QSize) -> QSize:
         """Taille de fenêtre pour une image : sa taille réelle, sans dépasser N % de l'écran."""
         dispo = self._zone_ecran()
@@ -283,6 +277,10 @@ class Liseuse(QWidget):
         """Nouvelle image (ou rotation) : la fenêtre prend sa taille, autour du même centre."""
         if not self.adaptatif() or not taille_px.isValid() or taille_px.isEmpty():
             return
+        if self.fige:                    # image figée : le cadre ne bouge pas, l'image s'y ajuste
+            self.vue.agrandir_auto = True
+            self.vue.auto = True
+            return
         t = self.taille_adaptee(taille_px)
         self.vue.agrandir_auto = False
         self.vue.auto = True
@@ -297,26 +295,30 @@ class Liseuse(QWidget):
             self.adapter_fenetre(t)
             v.ajuster()
 
-    def _suivre_dezoom(self):
-        """Dézoom à la molette : quand l'image devient plus petite que la fenêtre, la fenêtre
-        rétrécit avec elle (elle reste collée à l'image, qu'on déplace donc avec elle)."""
-        if not self.adaptatif() or self._redim_interne:
+    # ---------------------------------------------------------------- zoom : fenêtre + image, ou image seule
+    def zoom_ensemble(self, facteur: float, ancre: QPointF | None = None):
+        """Molette, + et - : en mode adaptatif la fenêtre suit l'image ; sinon zoom simple."""
+        if self.fige:
             return
-        r = self.vue.rect_image()
-        if r.isEmpty():
-            return
-        l = max(TAILLE_MIN_ADAPTATIF.width(), min(self.width(), round(r.width())))
-        h = max(TAILLE_MIN_ADAPTATIF.height(), min(self.height(), round(r.height())))
-        if l >= self.width() - 1 and h >= self.height() - 1:
-            return
-        self._geometrie_interne(self._rect_ancre(l, h))           # la barre ne bouge pas
-        self.vue.decalage = QPointF()
-        self.vue._ancre = QPointF(self.vue.width() / 2, self.vue.height() / 2)
-        self.vue._borner()
+        if self.adaptatif():
+            self.redimensionner_ensemble(facteur, ancre)
+        else:
+            self.vue.zoomer(facteur, ancre)
 
+    def zoom_image(self, facteur: float, ancre: QPointF | None = None):
+        """Ctrl+molette, Ctrl+ et Ctrl- : l'image seule, la fenêtre ne bouge pas."""
+        if not self.fige:
+            self.vue.zoomer(facteur, ancre)
+
+    def un_un(self):
+        if not self.fige:
+            self.vue.basculer_un_un()
     def redimensionner_ensemble(self, facteur: float, _ancre: QPointF | None = None):
-        """Ctrl+molette : la fenêtre et l'image grandissent / rétrécissent ensemble,
-        en tenant compte du zoom déjà fait."""
+        """Molette (mode adaptatif) : la fenêtre et l'image grandissent / rétrécissent ensemble,
+        en tenant compte du zoom déjà fait. Quand la fenêtre touche les bords de l'écran (ou sa
+        taille minimale), seule l'image continue."""
+        if self.fige:
+            return
         if not self.adaptatif():
             self.vue.zoomer(facteur, _ancre)
             return
@@ -338,7 +340,7 @@ class Liseuse(QWidget):
         else:
             f = max(facteur, 64 / min(base_l, base_h))        # l'image ne descend pas sous 64 px
         if abs(f - 1) < 1e-3:
-            self.notifier("Taille maximale atteinte (écran)." if facteur > 1 else "Taille minimale atteinte.", 1200)
+            self.vue.zoomer(facteur, _ancre)      # la fenêtre est au bout : l'image continue seule
             return
         v.auto = False                    # (sinon la vue recalculerait son zoom au redimensionnement)
         v.zoom *= f
@@ -364,8 +366,22 @@ class Liseuse(QWidget):
 
     def nativeEvent(self, type_evenement, message):
         """Windows : pendant un redimensionnement à la souris (mode adaptatif), la fenêtre garde
-        les proportions de l'image — elle reste collée à l'image, sans bandes vides."""
-        if sys.platform == "win32" and self.config.mode_affichage == "adaptatif" and not self.plein_ecran:
+        les proportions de l'image — elle reste collée à l'image, sans bandes vides.
+        Image figée : ni déplacement ni redimensionnement, même par le menu système (Alt+Espace)."""
+        if sys.platform == "win32" and self.fige:
+            try:
+                import ctypes
+                from ctypes import wintypes
+                msg = wintypes.MSG.from_address(int(message))
+                if msg.message == 0x0112 and (msg.wParam & 0xFFF0) in (0xF000, 0xF010, 0xF030):
+                    return True, 0                       # WM_SYSCOMMAND : SC_SIZE, SC_MOVE, SC_MAXIMIZE
+                if msg.message in (0x0214, 0x0216):      # WM_SIZING, WM_MOVING : on remet le rectangle actuel
+                    rect = wintypes.RECT.from_address(msg.lParam)
+                    ctypes.windll.user32.GetWindowRect(wintypes.HWND(msg.hWnd), ctypes.byref(rect))
+                    return True, 1
+            except Exception:
+                pass
+        elif sys.platform == "win32" and self.config.mode_affichage == "adaptatif" and not self.plein_ecran:
             try:
                 from ctypes import wintypes
                 msg = wintypes.MSG.from_address(int(message))
@@ -389,20 +405,43 @@ class Liseuse(QWidget):
 
     # ---------------------------------------------------------------- épingle (premier plan)
     def basculer_epingle(self):
-        self.epinglee = not self.epinglee
+        """Bouton punaise (ou T), trois états à la suite :
+        normal → épinglée au premier plan → figée (premier plan, rien ne bouge) → normal."""
+        if not self.epinglee:
+            self.definir_epingle(True, False)
+            self.notifier("📌 Épinglée au premier plan. (Jeu : réglez-le en « plein écran fenêtré / sans bordure ».)\n"
+                          "Encore un clic sur la punaise : image figée.", 4500)
+        elif not self.fige:
+            self.definir_epingle(True, True)
+            self.notifier("🔒 Image figée : impossible de la déplacer, de la redimensionner ou de zoomer.\n"
+                          "Encore un clic sur la punaise pour la libérer.", 4000)
+        else:
+            self.definir_epingle(False, False)
+            self.notifier("Épingle retirée : la fenêtre redevient normale.", 1800)
+
+    def definir_epingle(self, epinglee: bool, fige: bool):
+        self.epinglee, self.fige = epinglee, fige and epinglee
+        self.vue.fige = self.fige
         self._appliquer_epingle()
-        b = self.barre.epingle
-        b.changer_icone("epingle_active" if self.epinglee else "epingle")
-        b.setToolTip(("Désépingler : la fenêtre redevient normale  (T)" if self.epinglee else
-                      "Épingler au premier plan : l'image reste au-dessus de tout,\n"
-                      "même d'un jeu en plein écran fenêtré  (T)"))
         if self.epinglee:
             self._minuteur_epingle.start()
-            self.notifier("📌 Épinglée au premier plan. (Jeu : réglez-le en « plein écran fenêtré / sans bordure ».)",
-                          4500)
         else:
             self._minuteur_epingle.stop()
-            self.notifier("Épingle retirée.", 1500)
+        b = self.barre.epingle
+        if self.fige:
+            b.changer_icone("epingle_figee")
+            b.setToolTip("Image figée (premier plan, rien ne bouge).\nClic : libérer  (T)")
+        elif self.epinglee:
+            b.changer_icone("epingle_active")
+            b.setToolTip("Épinglée au premier plan.\nClic : figer aussi l'image (plus de déplacement ni de zoom)  (T)")
+        else:
+            b.changer_icone("epingle")
+            b.setToolTip("Épingler au premier plan : l'image reste au-dessus de tout,\n"
+                         "même d'un jeu en plein écran fenêtré  (T)")
+        # boutons sans effet sur une image figée
+        for bouton in (self.barre.zoom_plus, self.barre.zoom_moins, self.barre.un_un, self.barre.recadrer):
+            bouton.setEnabled(not self.fige)
+        self.vue.setCursor(Qt.CursorShape.ArrowCursor)
 
     def _appliquer_epingle(self, reaffirmer: bool = False):
         if sys.platform == "win32":
@@ -457,7 +496,7 @@ class Liseuse(QWidget):
 
     def ajuster_fenetre(self):
         """Bouton à côté de 1:1 : la fenêtre prend la taille de l'image affichée (zoom conservé)."""
-        if self.plein_ecran:
+        if self.plein_ecran or self.fige:
             return
         cible = self._taille_recadree()
         if cible is None:
@@ -800,9 +839,15 @@ class Liseuse(QWidget):
             actions.copier_fichier(self._chemin())
             self.notifier("Fichier copié : collez-le (Ctrl+V) dans Discord, un mail, un dossier…")
 
-    def imprimer(self):
+    def imprimer(self, apercu: bool = False):
+        """Ctrl+P : impression ; apercu=True : aperçu avant impression (Ctrl+Maj+P)."""
         if self.vue.image is not None:
-            actions.imprimer(self.vue.image, self, os.path.basename(self._chemin() or ""))
+            from . import impression
+            impression.imprimer(self.vue.image, self, os.path.basename(self._chemin() or ""), self.config, apercu)
+
+    def mise_en_page(self):
+        from . import impression
+        impression.mise_en_page(self, self.config)
 
     # ---------------------------------------------------------------- menus
     def _montrer_menu(self, menu: QMenu, bouton: QWidget):
@@ -837,6 +882,11 @@ class Liseuse(QWidget):
         m.addAction(icone("mosaique"), "Mosaïque Dossier\tCtrl+G", self.mosaique_dossier) \
             .setEnabled(len(self.chemins) > 1)
         m.addSeparator()
+        image = self.vue.image is not None or self.vue.apercu is not None
+        m.addAction("Taille d'origine / ajuster\t1", self.un_un).setEnabled(image and not self.fige)
+        a = m.addAction("Ajuster la fenêtre à la taille de l'image\tW", self.ajuster_fenetre)
+        a.setEnabled(image and not self.fige and not self.plein_ecran)
+        m.addSeparator()
         m.addAction("Ouvrir une image…\tCtrl+O", self.dialogue_ouvrir)
         m.addAction("Ouvrir des dossiers (sous-dossiers compris)…\tCtrl+Maj+O", self.dialogue_dossier)
         m.addAction("Composer une sélection de dossiers (plusieurs disques)…", self.dialogue_selection_dossiers)
@@ -866,7 +916,11 @@ class Liseuse(QWidget):
         m.addAction("Afficher dans le dossier\tCtrl+E",
                     lambda: actions.afficher_dans_dossier(chemin)).setEnabled(chemin is not None)
         m.addAction("Copier l'image\tCtrl+C", self.copier_image).setEnabled(self.vue.image is not None)
-        m.addAction("Imprimer…\tCtrl+P", self.imprimer).setEnabled(self.vue.image is not None)
+        imp = m.addMenu("Imprimer")
+        imp.setEnabled(self.vue.image is not None)
+        imp.addAction("Aperçu avant impression…\tCtrl+Maj+P", lambda: self.imprimer(apercu=True))
+        imp.addAction("Imprimer…\tCtrl+P", self.imprimer)
+        imp.addAction("Mise en page (papier, orientation, marges)…", self.mise_en_page)
         m.addSeparator()
         m.addAction("Supprimer (mettre à la corbeille)\tSuppr", lambda: self.supprimer()) \
             .setEnabled(chemin is not None)
@@ -1160,6 +1214,8 @@ class Liseuse(QWidget):
 
     def placer(self, rect: QRect):
         """Position imposée par la mosaïque : fenêtré, image ajustée à la fenêtre."""
+        if self.fige:                    # une image figée garde sa place
+            return
         self.arreter_diaporama()
         if self.plein_ecran:
             self.quitter_plein_ecran()
@@ -1201,6 +1257,9 @@ class Liseuse(QWidget):
 
     # ================================================================== modes
     def basculer_plein_ecran(self):
+        if self.fige:
+            self.notifier("Image figée : cliquez sur la punaise pour la libérer.", 1800)
+            return
         if self.plein_ecran:
             self.quitter_plein_ecran()
         else:
@@ -1217,13 +1276,43 @@ class Liseuse(QWidget):
         self.showFullScreen()
 
     def quitter_plein_ecran(self):
+        """Mode adaptatif : la fenêtre reprend la taille ET la place qu'avait l'image à l'écran
+        (zoom conservé). Mode PICASA : la fenêtre d'avant le plein écran revient."""
         if not self.plein_ecran:
             return
+        v = self.vue
+        image_ecran = None
+        if self.config.mode_affichage == "adaptatif" and not v.rect_image().isEmpty():
+            r = v.rect_image()
+            image_ecran = QRectF(QPointF(v.mapToGlobal(r.topLeft().toPoint())), r.size())
+        zoom = v.zoom
         self.plein_ecran = False
         self._redim_interne = True
         try:
             self.showNormal()
-            if self._geometrie_fenetre is not None:
+            if image_ecran is not None:
+                dispo = QRectF(self._zone_ecran())
+                visible = image_ecran.intersected(dispo)        # une image zoomée peut dépasser de l'écran
+                l = max(TAILLE_MIN_ADAPTATIF.width(), round(visible.width()))
+                h = max(TAILLE_MIN_ADAPTATIF.height(), round(visible.height()))
+                cible = QRect(0, 0, l, h)
+                cible.moveCenter(visible.center().toPoint())
+                d = dispo.toRect()
+                cible.moveLeft(max(d.left(), min(cible.left(), d.right() - l + 1)))
+                cible.moveTop(max(d.top(), min(cible.top(), d.bottom() - h + 1)))
+                v.auto = False                                  # même zoom qu'en plein écran
+                self.setGeometry(cible)
+                v.zoom = zoom
+                # l'image reste exactement où elle était à l'écran
+                v.decalage = image_ecran.center() - QPointF(cible.center()) - QPointF(0.5, 0.5)
+                v._borner()
+                r = v.rect_image()
+                colle = abs(r.width() - v.width()) <= 1.5 and abs(r.height() - v.height()) <= 1.5
+                v.auto = v.agrandir_auto = colle               # fenêtre = image : elle suivra la fenêtre
+                v._lisse = None
+                v._minuteur_lisse.start()
+                self._ancre_bas = None                           # nouvelle place : nouveau point fixe
+            elif self._geometrie_fenetre is not None:
                 self.setGeometry(self._geometrie_fenetre)
         finally:
             self._redim_interne = False

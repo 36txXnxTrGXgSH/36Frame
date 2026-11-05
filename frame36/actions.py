@@ -1,4 +1,4 @@
-"""Partage, ouverture avec un logiciel tiers, impression, dossier."""
+"""Partage, ouverture avec un logiciel tiers, dossier."""
 
 from __future__ import annotations
 
@@ -9,9 +9,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QMimeData, QRectF, Qt, QUrl
-from PySide6.QtGui import QDesktopServices, QGuiApplication, QImage, QPainter
-from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import QMimeData, QUrl
+from PySide6.QtGui import QDesktopServices, QGuiApplication, QImage
 
 WINDOWS = sys.platform == "win32"
 
@@ -152,27 +151,3 @@ def ouvrir_avec_choix_systeme(chemin: str) -> bool:
     if WINDOWS:
         return _lancer(["rundll32.exe", "shell32.dll,OpenAs_RunDLL", os.path.normpath(chemin)])
     return QDesktopServices.openUrl(QUrl.fromLocalFile(chemin))
-
-
-# ---------------------------------------------------------------------------- impression
-def imprimer(image: QImage, parent: QWidget, titre: str) -> None:
-    from PySide6.QtPrintSupport import QPrintDialog, QPrinter
-    from PySide6.QtGui import QPageLayout
-
-    imprimante = QPrinter(QPrinter.PrinterMode.HighResolution)
-    imprimante.setDocName(titre)
-    imprimante.setPageOrientation(QPageLayout.Orientation.Landscape if image.width() > image.height()
-                                  else QPageLayout.Orientation.Portrait)
-    dlg = QPrintDialog(imprimante, parent)
-    dlg.setWindowTitle("Imprimer " + titre)
-    if dlg.exec() != QPrintDialog.DialogCode.Accepted:
-        return
-    p = QPainter(imprimante)
-    page = QRectF(imprimante.pageLayout().paintRectPixels(imprimante.resolution()))
-    page.moveTo(0, 0)
-    taille = image.size().scaled(page.size().toSize(), Qt.AspectRatioMode.KeepAspectRatio)
-    cible = QRectF(0, 0, taille.width(), taille.height())
-    cible.moveCenter(page.center())
-    p.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-    p.drawImage(cible, image)
-    p.end()

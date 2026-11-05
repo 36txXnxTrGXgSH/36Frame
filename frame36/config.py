@@ -120,6 +120,13 @@ class Configuration:
     mosaique_douceur: int = 5                  # 1 = vif … 10 = très doux (défilement à la molette)
     mosaique_animation: str = "toujours"       # GIF / WebP dans la Mosaïque Dossier : toujours | survol | jamais
     echap_ferme: bool = True                   # Échap en fenêtré ferme la liseuse
+
+    # Impression (aperçu avant impression / mise en page)
+    impression_mode: str = "ajuster"           # ajuster | reel | remplir
+    impression_centrer: bool = True
+    impression_marges_mm: float = 10.0
+    impression_orientation: str = "auto"       # auto | portrait | paysage
+    impression_papier: str = ""                # ex. "A4" ; vide = format par défaut de l'imprimante
     confirmer_suppression: bool = True         # demander avant de mettre une image à la corbeille
 
     # Données

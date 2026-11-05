@@ -10,6 +10,7 @@ from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPainterPath, QPen, QP
 
 CLAIR = QColor(235, 235, 235)
 OR = QColor(255, 200, 40)
+ROUGE = QColor(240, 80, 80)
 
 
 def _fleche_arc(p: QPainter, sens: int):
@@ -100,13 +101,13 @@ def icone(nom: str, couleur: str = "#ebebeb") -> QIcon:
     elif nom == "fenetre":
         for (x, y, dx, dy) in ((13, 13, -1, -1), (19, 13, 1, -1), (13, 19, -1, 1), (19, 19, 1, 1)):
             p.drawPolyline(QPolygonF([QPointF(x, y + 5 * dy), QPointF(x, y), QPointF(x + 5 * dx, y)]))
-    elif nom in ("epingle", "epingle_active"):
-        coul = OR if nom == "epingle_active" else c
+    elif nom in ("epingle", "epingle_active", "epingle_figee"):
+        coul = {"epingle_active": OR, "epingle_figee": ROUGE}.get(nom, c)
         p.save()
         p.translate(16, 16)
         p.rotate(45)
         p.setPen(QPen(coul, 2.2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
-        if nom == "epingle_active":
+        if nom in ("epingle_active", "epingle_figee"):
             p.setBrush(coul)
         p.drawRoundedRect(QRectF(-4.5, -12, 9, 4), 1.2, 1.2)          # tête
         corps = QPainterPath()
@@ -114,6 +115,13 @@ def icone(nom: str, couleur: str = "#ebebeb") -> QIcon:
         p.drawPath(corps)                                                # corps
         p.drawLine(QPointF(0, 1), QPointF(0, 12))                        # pointe
         p.restore()
+        if nom == "epingle_figee":                                       # petit cadenas : tout est bloqué
+            p.setPen(QPen(QColor(255, 255, 255), 1.6))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawArc(QRectF(19.5, 16, 7, 7), 0, 180 * 16)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(255, 255, 255))
+            p.drawRoundedRect(QRectF(18, 19.5, 10, 8), 1.5, 1.5)
     elif nom == "recadrer":
         # l'image au centre, et les quatre coins de la fenêtre qui viennent l'entourer
         p.drawRect(QRectF(11, 11, 10, 10))

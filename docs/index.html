@@ -142,7 +142,8 @@
       <ul class="points">
         <li>Une grande photo est réduite pour tenir dans l'écran (90 % par défaut, réglable).</li>
         <li><strong>La barre d'outils ne bouge pas</strong> d'une image à l'autre : enchaînez les photos à la molette sur les miniatures.</li>
-        <li><kbd>Ctrl</kbd> + molette agrandit ou rétrécit la fenêtre <em>et</em> l'image ensemble.</li>
+        <li>La molette agrandit ou rétrécit la fenêtre <em>et</em> l'image ensemble ; <kbd>Ctrl</kbd> + molette zoome l'image seule.</li>
+        <li>En sortant du plein écran, la fenêtre garde la taille qu'avait l'image.</li>
         <li>Tirez un bord : l'image suit, en gardant ses proportions.</li>
         <li>Vous préférez l'ancien style ? Le <strong>mode PICASA</strong> (fenêtre fixe, fond gris) est dans la configuration.</li>
       </ul>
@@ -158,10 +159,11 @@
       <h2>Un zoom fluide et précis</h2>
       <p class="chapeau">Même une photo de 40 millions de pixels se zoome sans à-coup.</p>
       <ul class="points">
-        <li>Molette = zoom autour du curseur, animé, 12 % par cran.</li>
+        <li>Zoom autour du curseur, animé, 12 % par cran (<kbd>Ctrl</kbd> + molette, ou molette en mode PICASA).</li>
         <li>Une pastille affiche le pourcentage : <strong>100 % = un pixel de l'image pour un pixel de l'écran</strong>, même avec la mise à l'échelle Windows à 125 ou 150 %.</li>
         <li><kbd>1:1</kbd> pour la taille réelle, un second appui pour revenir à l'ajustement.</li>
         <li>Glissez l'image pour la parcourir quand elle est zoomée.</li>
+        <li><strong>Écran tactile</strong> : en plein écran, balayez vers la gauche ou la droite pour passer à l'image suivante ou précédente.</li>
       </ul>
     </div>
   </div>
@@ -174,7 +176,7 @@
     <img class="ecran" src="captures/mosaique-dossier.jpg" width="1720" height="968" loading="lazy"
          alt="La Mosaïque Dossier : douze images en rangées ajustées, l'image ouverte entourée en orange">
     <div class="cartes">
-      <div class="carte"><h3>Défilement amorti</h3><p>La molette fait défiler la suite du dossier en douceur ; <kbd>Ctrl</kbd>+molette agrandit les vignettes. Vertical ou horizontal, au choix.</p></div>
+      <div class="carte"><h3>Défilement amorti</h3><p>La molette fait défiler la suite du dossier en douceur ; <kbd>Ctrl</kbd>+molette agrandit les vignettes. Vertical ou horizontal, au choix. Au doigt : balayez vers la gauche ou la droite pour avancer ou reculer.</p></div>
       <div class="carte"><h3>Panorama</h3><p>Un bouton fait défiler les images toutes seules, à la vitesse choisie. L'écran ne se met pas en veille pendant ce temps.</p></div>
       <div class="carte"><h3>GIF et WebP animés</h3><p>Les animations bougent dans la mosaïque : toutes, ou seulement celle sous la souris. Décodées une seule fois, compressées en mémoire.</p></div>
     </div>
@@ -207,6 +209,7 @@
       <ul class="points">
         <li>On voit ce qu'il y a derrière : bureau, autre application… (ou damier, au choix).</li>
         <li><strong>Épingler au premier plan</strong> (bouton punaise ou <kbd>T</kbd>) : l'image reste au-dessus de tout, même d'un jeu en plein écran fenêtré.</li>
+        <li>Un second clic la <strong>fige</strong> : plus rien ne bouge, ni la fenêtre, ni l'image, ni le zoom.</li>
         <li>La fenêtre reste déplaçable en cliquant n'importe où sur l'image.</li>
       </ul>
     </div>
@@ -224,7 +227,7 @@
         <li><strong>Favoris</strong> et dossiers de favoris à vous, chacun parcouru comme un dossier.</li>
         <li><strong>Partager</strong> : e-mail avec la photo jointe, Discord, copier le fichier ou l'image.</li>
         <li><strong>Ouvrir avec</strong> Paint, Photoshop, GIMP, Krita… détectés automatiquement.</li>
-        <li>Diaporama, rotation, impression, <strong>suppression vers la corbeille</strong> (récupérable) avec <kbd>Suppr</kbd>.</li>
+        <li>Diaporama, rotation, <strong>impression avec aperçu</strong> (ajuster, taille réelle, remplir, marges, papier, orientation), <strong>suppression vers la corbeille</strong> (récupérable) avec <kbd>Suppr</kbd>.</li>
       </ul>
     </div>
   </div>
@@ -251,15 +254,17 @@
     <h2>Raccourcis</h2>
     <table>
       <tr><th>Geste / touche</th><th>Effet</th></tr>
-      <tr><td>Molette sur l'image</td><td>Zoom avant / arrière autour du curseur</td></tr>
+      <tr><td>Molette sur l'image</td><td>Fenêtre et image grandissent / rétrécissent ensemble</td></tr>
       <tr><td>Molette sur les miniatures</td><td>Image suivante (vers l'arrière) / précédente (vers l'avant)</td></tr>
-      <tr><td><kbd>Ctrl</kbd> + molette</td><td>Fenêtre et image grandissent / rétrécissent ensemble</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + molette</td><td>Zoom de l'image seule, autour du curseur</td></tr>
+      <tr><td>Balayage au doigt</td><td>Image suivante / précédente (plein écran, Mosaïque Dossier)</td></tr>
       <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Image précédente / suivante</td></tr>
       <tr><td>Double-clic, <kbd>F11</kbd></td><td>Plein écran ⇄ fenêtré</td></tr>
       <tr><td><kbd>1</kbd> · <kbd>0</kbd> · <kbd>W</kbd></td><td>Taille réelle · ajuster · fenêtre à la taille de l'image</td></tr>
       <tr><td><kbd>Espace</kbd></td><td>Diaporama (Panorama dans la Mosaïque Dossier)</td></tr>
       <tr><td><kbd>Ctrl</kbd>+<kbd>G</kbd> · <kbd>Ctrl</kbd>+<kbd>M</kbd></td><td>Mosaïque Dossier · mosaïque des fenêtres</td></tr>
-      <tr><td><kbd>T</kbd> · <kbd>Ctrl</kbd>+<kbd>D</kbd> · <kbd>Suppr</kbd></td><td>Épingler au premier plan · favori · mettre à la corbeille</td></tr>
+      <tr><td><kbd>T</kbd> · <kbd>Ctrl</kbd>+<kbd>D</kbd> · <kbd>Suppr</kbd></td><td>Épingler au premier plan (2ᵉ appui : figer) · favori · mettre à la corbeille</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>P</kbd> · <kbd>Ctrl</kbd>+<kbd>Maj</kbd>+<kbd>P</kbd></td><td>Imprimer · aperçu avant impression</td></tr>
       <tr><td><kbd>Ctrl</kbd>+<kbd>O</kbd> · <kbd>Ctrl</kbd>+<kbd>Maj</kbd>+<kbd>O</kbd></td><td>Ouvrir une image · ouvrir des dossiers (sous-dossiers compris)</td></tr>
     </table>
   </div>

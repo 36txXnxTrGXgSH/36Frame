@@ -13,7 +13,7 @@ import math
 import os
 import random
 
-from PySide6.QtCore import QObject, QPoint, QRect, QSize, QTimer
+from PySide6.QtCore import QObject, QPoint, QRect, QTimer
 from PySide6.QtGui import QCursor, QGuiApplication
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 

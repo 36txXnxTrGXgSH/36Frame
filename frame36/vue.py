@@ -12,9 +12,9 @@ from __future__ import annotations
 
 import math
 
-from PySide6.QtCore import (QEasingCurve, QObject, QPoint, QPointF, QRectF, QRunnable, QSize, QSizeF, Qt,
+from PySide6.QtCore import (QEasingCurve, QElapsedTimer, QObject, QPoint, QPointF, QRectF, QRunnable, QSize, QSizeF, Qt,
                             QThreadPool, QTimer, QVariantAnimation, Signal)
-from PySide6.QtGui import QBrush, QColor, QCursor, QFont, QImage, QPainter, QPixmap, QTransform
+from PySide6.QtGui import QBrush, QColor, QCursor, QFont, QImage, QInputDevice, QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import QWidget
 
 ZOOM_MIN, ZOOM_MAX = 0.01, 40.0
@@ -81,9 +81,28 @@ def _damier(p: QPainter, r: QRectF, cote: int = 10):
     p.fillRect(r, QBrush(_MOTIF_DAMIER))
 
 
+def est_tactile(e) -> bool:
+    """Événement souris venant d'un doigt (écran tactile), et non d'une vraie souris."""
+    try:
+        appareil = e.pointingDevice()
+        if appareil is not None and appareil.type() == QInputDevice.DeviceType.TouchScreen:
+            return True
+    except AttributeError:
+        pass
+    return e.source() != Qt.MouseEventSource.MouseEventNotSynthesized
+
+
+def sens_balayage(delta: QPointF, duree_ms: int, seuil: float = 70) -> int:
+    """Glissement horizontal net et rapide : +1 vers la gauche (suivant), -1 vers la droite."""
+    if duree_ms > 900 or abs(delta.x()) < seuil or abs(delta.x()) < 1.6 * abs(delta.y()):
+        return 0
+    return 1 if delta.x() < 0 else -1
+
+
 class Vue(QWidget):
     zoom_change = Signal(float)
-    ctrl_molette = Signal(float, QPointF)     # Ctrl+molette : la fenêtre et l'image ensemble (mode adaptatif)
+    molette_fenetre = Signal(float, QPointF)  # molette (mode adaptatif) : la fenêtre et l'image ensemble
+    balayage = Signal(int)                    # glissement du doigt : +1 image suivante, -1 précédente
     double_clic = Signal()
     clic_fond = Signal()               # clic (sans glisser) sur le fond
     menu_demande = Signal(QPoint)
@@ -110,7 +129,8 @@ class Vue(QWidget):
         # images détourées : « derriere » (on voit ce qu'il y a derrière la fenêtre), « fond », « damier »
         self.mode_transparence = "derriere"
         self.agrandir_auto = False
-        self.ctrl_redimensionne = False        # Ctrl+molette réservé à la fenêtre (mode adaptatif)
+        self.molette_redimensionne = False     # mode adaptatif : la molette agrandit fenêtre + image
+        self.fige = False                      # épingle « figée » : ni déplacement, ni zoom, ni redimensionnement
         self.transparente = False
         self.message = ""
 
@@ -141,6 +161,8 @@ class Vue(QWidget):
 
         self._appui: QPointF | None = None
         self._appui_decalage = QPointF()
+        self._chrono_appui = QElapsedTimer()
+        self._tactile = False
         self._mode_glisser = None              # "image" | "fenetre" | "fond_plein" | None
         self._a_glisse = False
 
@@ -492,7 +514,7 @@ class Vue(QWidget):
     # ------------------------------------------------------------------ souris
     def _bords(self, pos: QPoint) -> Qt.Edge:
         fen = self.window()
-        if self.plein_ecran or fen.isMaximized():
+        if self.plein_ecran or self.fige or fen.isMaximized():
             return Qt.Edge(0)
         m = MARGE_BORD
         bords = Qt.Edge(0)
@@ -544,8 +566,15 @@ class Vue(QWidget):
         self._appui = pos
         self._appui_decalage = QPointF(self.decalage)
         self._a_glisse = False
+        self._chrono_appui.start()
+        self._tactile = est_tactile(e)
         sur_image = self.rect_image().contains(pos)
-        if sur_image and (self.deborde() or not self.couvre_tout()):
+        if self.fige:
+            self._mode_glisser = "fige"            # image figée : on ne déplace rien
+        elif self._tactile and self.plein_ecran and not self.deborde():
+            # doigt en plein écran sur une image entière : un glissement change d'image
+            self._mode_glisser = "balayage" if sur_image else "fond_plein"
+        elif sur_image and (self.deborde() or not self.couvre_tout()):
             # image zoomée (on la parcourt) ou plus petite que la zone (on la déplace)
             self._mode_glisser = "image"
         elif self.plein_ecran:
@@ -576,6 +605,11 @@ class Vue(QWidget):
 
     def mouseReleaseEvent(self, e):
         if e.button() == Qt.MouseButton.LeftButton:
+            if self._tactile and self._mode_glisser in ("balayage", "fond_plein") and self._appui is not None:
+                sens = sens_balayage(e.position() - self._appui, self._chrono_appui.elapsed())
+                if sens:
+                    self.balayage.emit(sens)
+                    self._a_glisse = True
             if self._mode_glisser == "fond_plein" and not self._a_glisse:
                 self.clic_fond.emit()
             self._appui = None
@@ -584,7 +618,7 @@ class Vue(QWidget):
             self._maj_curseur(e.position().toPoint())
 
     def mouseDoubleClickEvent(self, e):
-        if e.button() == Qt.MouseButton.LeftButton and not self._bords(e.position().toPoint()):
+        if e.button() == Qt.MouseButton.LeftButton and not self.fige and not self._bords(e.position().toPoint()):
             self.double_clic.emit()
 
     def wheelEvent(self, e):
@@ -592,13 +626,14 @@ class Vue(QWidget):
         d = e.angleDelta().y() or e.angleDelta().x()
         if not d:
             d = e.pixelDelta().y() * 2
-        if not d:
-            return
-        if self.ctrl_redimensionne and e.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            self.ctrl_molette.emit(PAS_ZOOM ** (d / 120), e.position())
-        else:
-            self.zoomer(PAS_ZOOM ** (d / 120), e.position())
         e.accept()
+        if not d or self.fige:
+            return
+        facteur = PAS_ZOOM ** (d / 120)
+        if self.molette_redimensionne and not e.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            self.molette_fenetre.emit(facteur, e.position())     # fenêtre + image ensemble
+        else:
+            self.zoomer(facteur, e.position())                   # Ctrl (ou plein écran / PICASA) : l'image seule
 
     def leaveEvent(self, e):
         self.souris_bouge.emit(QPoint(-1, -1))

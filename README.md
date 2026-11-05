@@ -74,7 +74,8 @@ Au-dessus : nom, dimensions, rang dans le dossier, et les **miniatures du dossie
 
 | Geste | Effet |
 |---|---|
-| Molette sur l'image | zoom avant / arrière autour du curseur |
+| Molette sur l'image | mode adaptatif : l'image **et la fenêtre** grandissent / rétrécissent ensemble ; mode PICASA : zoom |
+| `Ctrl+molette` sur l'image | zoom de l'image seule (la fenêtre garde sa taille) |
 | Molette sur les miniatures | arrière = image suivante, avant = précédente |
 | Clic sur une miniature | ouvre l'image |
 | Glisser le fond (fenêtré) | déplace la fenêtre |
@@ -83,14 +84,15 @@ Au-dessus : nom, dimensions, rang dans le dossier, et les **miniatures du dossie
 | Bords de la fenêtre | redimensionnement |
 | Double-clic / F11 / Entrée | plein écran ⇄ fenêtré |
 | Clic sur le fond en plein écran | retour en fenêtré |
-| Clic droit | menu des options |
+| Balayage au doigt (écran tactile) en plein écran | vers la gauche = image suivante, vers la droite = précédente |
+| Clic droit | menu des options (dont « Taille d'origine / ajuster » et « Ajuster la fenêtre à la taille de l'image ») |
 | Clic molette (ou Ctrl+clic) sur une miniature | ouvre l'image dans une nouvelle fenêtre |
 | Clic droit sur ★ | ranger l'image dans un dossier de favoris |
 | Haut à droite (survol) | réduire / plein écran / fermer |
 
-Raccourcis : `←` `→` (aussi PgPréc/PgSuiv), `Début`/`Fin`, `+` `-`, `1` (1:1), `0` (ajuster),
+Raccourcis : `←` `→` (aussi PgPréc/PgSuiv), `Début`/`Fin`, `+` `-` (fenêtre + image), `Ctrl++` `Ctrl+-` (image seule), `1` (1:1), `0` (ajuster), `W` (fenêtre ajustée à l'image), `T` (épingle),
 `Espace` (diaporama), `Échap`, `Ctrl+L` / `Ctrl+R` (rotation), `Ctrl+D` (favori),
-`Ctrl+C` (copier l'image), `Ctrl+Maj+C` (copier le fichier), `Ctrl+P`, `Ctrl+O`, `Ctrl+E` (dossier),
+`Ctrl+C` (copier l'image), `Ctrl+Maj+C` (copier le fichier), `Ctrl+P` (imprimer), `Ctrl+Maj+P` (aperçu avant impression), `Ctrl+O`, `Ctrl+E` (dossier),
 `Ctrl+N` (nouvelle fenêtre), `Ctrl+M` (mosaïque), `Ctrl+W` (fermer la fenêtre), `Ctrl+Q` (tout fermer).
 
 **Zoom** : animé et progressif (12 % par cran de molette, en continu sur pavé tactile) ; une pastille
@@ -107,7 +109,9 @@ ouverte. Molette arrière / avant : la suite / le début du dossier, en défilem
 (accélère et ralentit en douceur ; « Douceur du défilement » réglable dans Configuration).
 `Ctrl+molette` (ou `+` `-`) : images plus grandes ou plus petites (nombre de rangées, mémorisé).
 Clic sur une image : elle s'ouvre dans la liseuse ; clic molette : nouvelle fenêtre ;
-clic sur le fond ou `Échap` : retour. Seules les images visibles sont chargées, à la taille d'affichage.
+clic sur le fond ou `Échap` : retour.
+**Écran tactile** : le contenu suit le doigt ; un balayage rapide vers la gauche avance d'un écran, vers la droite
+recule d'un écran (en défilement vertical, un balayage vers le haut / le bas fonctionne aussi). Seules les images visibles sont chargées, à la taille d'affichage.
 Défilement **vertical** (rangées) ou **horizontal** (colonnes) : Configuration, ou clic droit dans la mosaïque.
 **Panorama** : bouton en bas au centre (visible au survol) ou `Espace` : les images défilent toutes
 seules ; vitesse réglable dans Configuration (secondes par écran), reprend au début si « Recommencer »
@@ -142,9 +146,9 @@ seulement si elle est petite) ; la Mosaïque Dossier rend sa mémoire (256 Mo ma
 mosaïque) est mise en pause.
 
 **Mode adaptatif** (par défaut) : la fenêtre épouse l'image — sa taille réelle, sans dépasser 90 % de
-l'écran (réglable) — et se réadapte à chaque image. Molette : zoom dans la fenêtre (qui garde sa taille ;
-en dézoomant sous la taille de la fenêtre, la fenêtre rétrécit avec l'image). **Ctrl+molette** : la fenêtre
-et l'image grandissent / rétrécissent ensemble (zoom en cours pris en compte). Redimensionner la fenêtre à
+l'écran (réglable) — et se réadapte à chaque image. **Molette** : la fenêtre et l'image grandissent /
+rétrécissent ensemble (zoom en cours pris en compte ; arrivée au bord de l'écran, seule l'image continue).
+**Ctrl+molette** : zoom de l'image seule, la fenêtre garde sa taille. Redimensionner la fenêtre à
 la souris agrandit l'image, en gardant ses proportions. Pas de fond : seule l'image est visible.
 La fenêtre change de taille autour de son **bas-centre** et la barre d'outils a une largeur fixe : la
 barre et les miniatures **ne bougent pas** d'une image à l'autre (pratique pour enchaîner à la molette sur
@@ -163,6 +167,18 @@ toutes les autres, y compris d'un **jeu en plein écran fenêtré / sans bordure
 plein écran *exclusif* ne peut être recouvert par aucune fenêtre (limite de Windows) : choisir le mode
 sans bordure dans les options vidéo du jeu. L'épingle est réaffirmée chaque seconde, au cas où le jeu se
 remettrait lui-même devant. Astuce : avec une image détourée, seul le sujet apparaît par-dessus le jeu.
+Le même bouton a **trois états** (clic après clic) : normal → **épinglée** (punaise dorée) → **figée**
+(punaise rouge avec cadenas : toujours au premier plan, et plus rien ne bouge — ni la fenêtre, ni l'image,
+ni le zoom, ni la taille, même par Alt+Espace) → normal.
+
+**Plein écran** : en sortant du plein écran (mode adaptatif), la fenêtre reprend la taille et la place
+qu'avait l'image à l'écran, zoom conservé.
+
+**Impression** (clic droit > Imprimer) : **aperçu avant impression**, impression directe, mise en page.
+Dans l'aperçu : image ajustée à la page, **taille réelle** (selon la résolution du fichier) ou page remplie
+(rognée), centrage, marges ; orientation automatique selon l'image ; papier et orientation (« Mise en
+page ») ; imprimante, nombre de copies, couleur, recto-verso dans la fenêtre d'impression de Windows.
+Les réglages sont mémorisés.
 
 **Images détourées** (PNG, WebP, GIF… à fond transparent) : en mode fenêtré, la fenêtre perd son fond et
 seul le sujet reste visible, posé sur ce qui se trouve derrière (bureau, autres applications). La
@@ -175,7 +191,7 @@ il reste à faire Ctrl+V), copier le fichier ou l'image, afficher dans le dossie
 
 **Autres options** : favoris (liste, parcours de tous les favoris comme un dossier), ouvrir avec
 (Paint, Photoshop, GIMP, Krita, Paint.NET… détectés automatiquement, + logiciels ajoutés, + « Autre
-application… »), imprimer, configuration.
+application… »), imprimer (aperçu, mise en page), configuration.
 
 **Visionneuse par défaut (Windows)** : Configuration > « Visionneuse par défaut de Windows » (ou menu ▾) :
 cocher les types d'images (27 formats : JPEG, PNG, WebP, AVIF, GIF, BMP, TIFF, ICO, PSD, TGA, SVG…),

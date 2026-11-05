@@ -22,6 +22,7 @@ from PySide6.QtWidgets import QHBoxLayout, QMenu, QToolTip, QWidget
 from . import actions, veille
 from .barre import Bouton, _Panneau
 from .chargement import charger_apercu, dimensions, est_anime
+from .vue import est_tactile, sens_balayage
 
 PALIERS = (160, 240, 320, 400, 480, 640, 800, 960, 1280, 1600, 1920, 2560)   # hauteurs de décodage
 RANGEES_MIN, RANGEES_MAX = 1.2, 10.0
@@ -211,6 +212,9 @@ class MosaiqueDossier(QWidget):
         self.cible = 0.0
         self._survol = -1
         self._appui: QPointF | None = None
+        self._tactile = False                 # appui au doigt (écran tactile)
+        self._defil_appui = 0.0
+        self._chrono_appui = QElapsedTimer()
         self._ferme = False
         self._panorama_actif = False
 
@@ -706,6 +710,11 @@ class MosaiqueDossier(QWidget):
         e.accept()
 
     def mouseMoveEvent(self, e):
+        if self._tactile and self._appui is not None:
+            # au doigt : le contenu suit le doigt dans le sens du défilement
+            d = e.position() - self._appui
+            self.aller_a(self._defil_appui - (d.x() if self.horizontal else d.y()), anime=False)
+            return
         i = self._element_en(e.position())
         if i != self._survol:
             ancien = self._survol
@@ -723,12 +732,29 @@ class MosaiqueDossier(QWidget):
 
     def mousePressEvent(self, e):
         self._appui = e.position()
+        self._tactile = est_tactile(e) and e.button() == Qt.MouseButton.LeftButton
+        self._defil_appui = self.defilement
+        self._chrono_appui.start()
+        if self._tactile:
+            if self._panorama_actif:
+                self.arreter_panorama()
+            self.aller_a(self.defilement, anime=False)      # le doigt « attrape » le défilement en cours
 
     def mouseReleaseEvent(self, e):
         if self._appui is None:
             return
-        deplace = (e.position() - self._appui).manhattanLength() > 6
+        delta = e.position() - self._appui
+        deplace = delta.manhattanLength() > (14 if self._tactile else 6)
         self._appui = None
+        if self._tactile:
+            self._tactile = False
+            # balayage rapide vers la gauche = en avant, vers la droite = en arrière
+            sens = sens_balayage(delta, self._chrono_appui.elapsed())
+            if not sens and not self.horizontal:
+                sens = sens_balayage(QPointF(delta.y(), delta.x()), self._chrono_appui.elapsed())
+            if sens:
+                self.aller_a(self._defil_appui + self._pas_page(sens))
+                return
         if deplace:
             return
         i = self._element_en(e.position())

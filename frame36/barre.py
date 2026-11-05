@@ -6,7 +6,7 @@ import os
 
 from PySide6.QtCore import (QEasingCurve, QPoint, QPointF, QPropertyAnimation, QRectF, QSize, Qt,
                             QTimer, QVariantAnimation, Signal)
-from PySide6.QtGui import QColor, QCursor, QFont, QImage, QLinearGradient, QPainter, QPainterPath, QPen
+from PySide6.QtGui import QColor, QCursor, QFont, QLinearGradient, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (QGraphicsDropShadowEffect, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QToolButton, QToolTip,
                                QVBoxLayout, QWidget)
 
@@ -354,7 +354,7 @@ class BarreOutils(_Panneau):
     def mousePressEvent(self, e):
         # zone vide de la barre : elle se comporte comme le fond (déplace la fenêtre)
         fen = self.window()
-        if (e.button() == Qt.MouseButton.LeftButton and not fen.isFullScreen()
+        if (e.button() == Qt.MouseButton.LeftButton and not fen.isFullScreen() and not getattr(fen, "fige", False)
                 and fen.windowHandle() is not None):
             fen.windowHandle().startSystemMove()
 
