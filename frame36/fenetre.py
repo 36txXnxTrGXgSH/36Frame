@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import math
 import os
 import sys
 
@@ -16,7 +17,7 @@ from .chargement import (EXTENSIONS, ChargeurImages, ChargeurMiniatures, dimensi
                          est_image, lister_arborescence, lister_dossier, octets_estimes)
 from .config import Configuration
 from .icones import icone, icone_appli
-from .vue import MARGE_BORD, Vue
+from .vue import MARGE_BORD, PAS_ZOOM, ZOOM_MAX, ZOOM_MIN, Vue
 
 TAILLE_MIN = QSize(160, 120)            # petit : la mosaïque peut réduire beaucoup les fenêtres
 TAILLE_MIN_OUVERTURE = QSize(520, 360)  # taille minimale à l'ouverture d'une image (mode PICASA)
@@ -99,6 +100,7 @@ class Liseuse(QWidget):
         b.epingle.clicked.connect(self.basculer_epingle)
         self.vue.zoom_change.connect(lambda _z: self._maj_recadrer())
         self.vue.molette_fenetre.connect(self.redimensionner_ensemble)
+        self.vue.deplacer_ensemble.connect(self._deplacer_ensemble)
         self.vue.balayage.connect(self.aller_relatif)          # doigt, en plein écran
         b.precedent.clicked.connect(lambda: self.aller_relatif(-1))
         b.suivant.clicked.connect(lambda: self.aller_relatif(1))
@@ -313,56 +315,85 @@ class Liseuse(QWidget):
     def un_un(self):
         if not self.fige:
             self.vue.basculer_un_un()
-    def redimensionner_ensemble(self, facteur: float, _ancre: QPointF | None = None):
-        """Molette (mode adaptatif) : la fenêtre et l'image grandissent / rétrécissent ensemble,
-        en tenant compte du zoom déjà fait. Quand la fenêtre touche les bords de l'écran (ou sa
-        taille minimale), seule l'image continue."""
+    def _image_globale(self) -> QRectF:
+        """Où est l'image à l'écran (coordonnées globales, sans arrondi), même hors de la fenêtre."""
+        v = self.vue
+        taille = v._taille_image()
+        r = QRectF(0, 0, taille.width() * v.zoom, taille.height() * v.zoom)
+        r.moveCenter(QPointF(v.mapToGlobal(QPoint(0, 0))) + QPointF(v.width() / 2, v.height() / 2) + v.decalage)
+        return r
+
+    def _coller_a(self, image: QRectF, zoom: float) -> bool:
+        """Mode adaptatif : la fenêtre prend exactement la place de l'image à l'écran (« image »,
+        coordonnées globales). Si l'image dépasse de l'écran, la fenêtre en couvre la partie
+        visible : sans fond, cela se voit comme une fenêtre qui déborde. Une petite image garde
+        une fenêtre assez large pour toute la barre (surplus transparent)."""
+        dispo = QRectF(self._zone_ecran())
+        visible = image.intersected(dispo)
+        if visible.width() < 40 or visible.height() < 40:
+            return False                            # l'image ne part pas entièrement hors de l'écran
+        l = min(round(dispo.width()), max(TAILLE_MIN_ADAPTATIF.width(), round(visible.width())))
+        h = min(round(dispo.height()), max(TAILLE_MIN_ADAPTATIF.height(), round(visible.height())))
+        cible = QRectF(0, 0, l, h)
+        cible.moveCenter(visible.center())
+        cible.moveLeft(round(max(dispo.left(), min(cible.left(), dispo.right() - l))))
+        cible.moveTop(round(max(dispo.top(), min(cible.top(), dispo.bottom() - h))))
+        v = self.vue
+        v._anim.stop()
+        v.auto = False                             # (sinon la vue recalculerait son zoom au redimensionnement)
+        v.libre = False
+        self._redim_interne = True
+        try:
+            if cible.toRect() != self.geometry():
+                self.setGeometry(cible.toRect())
+            v.zoom = zoom
+            v.decalage = image.center() - cible.center()
+            v._borner()
+            colle = abs(image.width() - l) <= 1.5 and abs(image.height() - h) <= 1.5
+            v.auto = v.agrandir_auto = colle       # fenêtre = image : l'image suivra un redimensionnement à la main
+            self._ancre_bas = None                  # nouvelle place : nouveau point fixe pour la suite
+        finally:
+            self._redim_interne = False
+        v._lisse = None
+        v._minuteur_lisse.start()
+        v.update()
+        return True
+
+    def _deplacer_ensemble(self, delta: QPointF):
+        """Glisser une image plus grande que l'écran : fenêtre et image bougent ensemble."""
+        if not self.fige and self.adaptatif():
+            self._coller_a(self._image_globale().translated(delta), self.vue.zoom)
+
+    def redimensionner_ensemble(self, facteur: float, ancre: QPointF | None = None):
+        """Molette (mode adaptatif) : l'image zoome autour du curseur et la fenêtre la suit
+        toujours, même quand l'image dépasse de l'écran (la fenêtre en couvre alors la partie
+        visible). Ctrl+molette (zoom_image) agit sur l'image seule ; le cran suivant à la molette
+        recolle la fenêtre à l'image."""
         if self.fige:
             return
         if not self.adaptatif():
-            self.vue.zoomer(facteur, _ancre)
+            self.vue.zoomer(facteur, ancre)
             return
         v = self.vue
         v._anim.stop()
-        r = v.rect_image()
-        if r.isEmpty():
+        taille = v._taille_image()
+        if taille.isEmpty() or v.zoom <= 0:
             return
-        # image plus petite que la fenêtre (dans les deux sens) : on l'ajuste d'abord à la fenêtre
-        if r.width() < self.width() - 1 and r.height() < self.height() - 1:
-            v.zoom = v.zoom_ajuste()
-            v.decalage = QPointF()
-            r = v.rect_image()
-        # « boîte » actuelle : la fenêtre, ou l'image si elle est plus étroite dans un sens
-        base_l, base_h = min(self.width(), r.width()), min(self.height(), r.height())
-        dispo = self._zone_ecran()
-        if facteur > 1:
-            f = min(facteur, dispo.width() / base_l, dispo.height() / base_h)
+        image = self._image_globale()
+        if ancre is None:                          # clavier : autour du centre de ce qu'on voit
+            point = image.intersected(QRectF(self.geometry())).center()
         else:
-            f = max(facteur, 64 / min(base_l, base_h))        # l'image ne descend pas sous 64 px
-        if abs(f - 1) < 1e-3:
-            self.vue.zoomer(facteur, _ancre)      # la fenêtre est au bout : l'image continue seule
-            return
-        v.auto = False                    # (sinon la vue recalculerait son zoom au redimensionnement)
-        v.zoom *= f
-        v.decalage = v.decalage * f
-        # la fenêtre suit l'image, sans descendre sous la taille qui affiche toute la barre
-        l = max(TAILLE_MIN_ADAPTATIF.width(), round(base_l * f))
-        h = max(TAILLE_MIN_ADAPTATIF.height(), round(base_h * f))
-        self._redim_interne = True
-        try:
-            self.setGeometry(self._rect_ancre(l, h))              # bas-centre fixe : la barre ne bouge pas
-            v._borner()
-            # fenêtre = image : ensuite, l'image suivra la fenêtre si on la redimensionne à la main
-            r = v.rect_image()
-            colle = abs(r.width() - v.width()) <= 1.5 or abs(r.height() - v.height()) <= 1.5
-            v.auto = v.agrandir_auto = colle
-            v._lisse = None
-            v._minuteur_lisse.start()
-            v._montrer_pct(v.zoom)
-            v.zoom_change.emit(v.zoom)
-        finally:
-            self._redim_interne = False
-        v.update()
+            point = QPointF(v.mapToGlobal(QPoint(0, 0))) + ancre
+        z = v.zoom * facteur
+        if abs(v.zoom - 1) > 1e-6 and (v.zoom - 1) * (z - 1) < 0 and abs(math.log(z)) < math.log(PAS_ZOOM) * 0.6:
+            z = 1.0                                # petit cran magnétique sur 100 %
+        petit_cote = min(taille.width(), taille.height())
+        z = max(min(v.zoom, 64 / petit_cote), ZOOM_MIN, min(ZOOM_MAX, z))    # pas sous 64 px
+        k = z / v.zoom
+        nouvelle = QRectF(point + (image.topLeft() - point) * k, image.size() * k)
+        if self._coller_a(nouvelle, z):
+            v._montrer_pct(z)
+            v.zoom_change.emit(z)
 
     def nativeEvent(self, type_evenement, message):
         """Windows : pendant un redimensionnement à la souris (mode adaptatif), la fenêtre garde
@@ -1283,35 +1314,16 @@ class Liseuse(QWidget):
         v = self.vue
         image_ecran = None
         if self.config.mode_affichage == "adaptatif" and not v.rect_image().isEmpty():
-            r = v.rect_image()
-            image_ecran = QRectF(QPointF(v.mapToGlobal(r.topLeft().toPoint())), r.size())
+            image_ecran = self._image_globale()
         zoom = v.zoom
         self.plein_ecran = False
         self._redim_interne = True
         try:
             self.showNormal()
             if image_ecran is not None:
-                dispo = QRectF(self._zone_ecran())
-                visible = image_ecran.intersected(dispo)        # une image zoomée peut dépasser de l'écran
-                l = max(TAILLE_MIN_ADAPTATIF.width(), round(visible.width()))
-                h = max(TAILLE_MIN_ADAPTATIF.height(), round(visible.height()))
-                cible = QRect(0, 0, l, h)
-                cible.moveCenter(visible.center().toPoint())
-                d = dispo.toRect()
-                cible.moveLeft(max(d.left(), min(cible.left(), d.right() - l + 1)))
-                cible.moveTop(max(d.top(), min(cible.top(), d.bottom() - h + 1)))
-                v.auto = False                                  # même zoom qu'en plein écran
-                self.setGeometry(cible)
-                v.zoom = zoom
-                # l'image reste exactement où elle était à l'écran
-                v.decalage = image_ecran.center() - QPointF(cible.center()) - QPointF(0.5, 0.5)
-                v._borner()
-                r = v.rect_image()
-                colle = abs(r.width() - v.width()) <= 1.5 and abs(r.height() - v.height()) <= 1.5
-                v.auto = v.agrandir_auto = colle               # fenêtre = image : elle suivra la fenêtre
-                v._lisse = None
-                v._minuteur_lisse.start()
-                self._ancre_bas = None                           # nouvelle place : nouveau point fixe
+                # la fenêtre reprend la taille et la place qu'avait l'image à l'écran (zoom gardé)
+                if not self._coller_a(image_ecran, zoom) and self._geometrie_fenetre is not None:
+                    self.setGeometry(self._geometrie_fenetre)
             elif self._geometrie_fenetre is not None:
                 self.setGeometry(self._geometrie_fenetre)
         finally:

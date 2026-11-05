@@ -103,6 +103,7 @@ class Vue(QWidget):
     zoom_change = Signal(float)
     molette_fenetre = Signal(float, QPointF)  # molette (mode adaptatif) : la fenêtre et l'image ensemble
     balayage = Signal(int)                    # glissement du doigt : +1 image suivante, -1 précédente
+    deplacer_ensemble = Signal(QPointF)       # mode adaptatif : glisser une image qui déborde déplace fenêtre + image
     double_clic = Signal()
     clic_fond = Signal()               # clic (sans glisser) sur le fond
     menu_demande = Signal(QPoint)
@@ -131,6 +132,7 @@ class Vue(QWidget):
         self.agrandir_auto = False
         self.molette_redimensionne = False     # mode adaptatif : la molette agrandit fenêtre + image
         self.fige = False                      # épingle « figée » : ni déplacement, ni zoom, ni redimensionnement
+        self.libre = False                     # Ctrl+glisser : l'image peut sortir de la fenêtre (40 px restent visibles)
         self.transparente = False
         self.message = ""
 
@@ -161,6 +163,7 @@ class Vue(QWidget):
 
         self._appui: QPointF | None = None
         self._appui_decalage = QPointF()
+        self._appui_global = QPointF()
         self._chrono_appui = QElapsedTimer()
         self._tactile = False
         self._mode_glisser = None              # "image" | "fenetre" | "fond_plein" | None
@@ -192,6 +195,7 @@ class Vue(QWidget):
         self.taille_attendue = t if t.isValid() else (self.apercu.size() if self.apercu else QSize())
         self.auto = True
         self.decalage = QPointF()
+        self.libre = False
         self._ajuster_si_auto()
         self.update()
 
@@ -209,6 +213,7 @@ class Vue(QWidget):
             self._anim.stop()
             self.auto = True
             self.decalage = QPointF()
+            self.libre = False
             self._ajuster_si_auto()
             self._nouvelle_pyramide()
             self._minuteur_lisse.start(0)
@@ -247,6 +252,7 @@ class Vue(QWidget):
             self.taille_attendue.transpose()
         self.auto = True
         self.decalage = QPointF()
+        self.libre = False
         self._ajuster_si_auto()
         self._lisse = None
         self._minuteur_lisse.start(0)
@@ -351,6 +357,7 @@ class Vue(QWidget):
             self.animer_zoom(1.0, ancre)
 
     def ajuster(self):
+        self.libre = False
         self.animer_zoom(self.zoom_auto(), decalage=QPointF(), auto_apres=True)
 
     def pourcentage(self) -> float:
@@ -415,7 +422,9 @@ class Vue(QWidget):
         dx, dy = self.decalage.x(), self.decalage.y()
         limites = []
         for taille_img, taille_vue in ((l, self.width()), (h, self.height())):
-            if taille_img > taille_vue:
+            if self.libre:
+                lim = max(0, (taille_img + taille_vue) / 2 - 40)
+            elif taille_img > taille_vue:
                 lim = (taille_img - taille_vue) / 2      # pas de bord vide quand on déborde
             else:
                 lim = max(0, taille_vue / 2 - 40)        # 40 px restent visibles
@@ -543,7 +552,7 @@ class Vue(QWidget):
         bords = self._bords(pos)
         if bords:
             self.setCursor(self._CURSEURS.get(bords.value, Qt.CursorShape.ArrowCursor))
-        elif self._mode_glisser == "image" and self._a_glisse:
+        elif self._mode_glisser in ("image", "libre", "ensemble") and self._a_glisse:
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
         elif self.rect_image().contains(QPointF(pos)) and self.deborde():
             self.setCursor(Qt.CursorShape.OpenHandCursor)
@@ -565,6 +574,7 @@ class Vue(QWidget):
         self._anim.stop()
         self._appui = pos
         self._appui_decalage = QPointF(self.decalage)
+        self._appui_global = e.globalPosition()
         self._a_glisse = False
         self._chrono_appui.start()
         self._tactile = est_tactile(e)
@@ -574,6 +584,11 @@ class Vue(QWidget):
         elif self._tactile and self.plein_ecran and not self.deborde():
             # doigt en plein écran sur une image entière : un glissement change d'image
             self._mode_glisser = "balayage" if sur_image else "fond_plein"
+        elif not self.plein_ecran and sur_image and e.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            self._mode_glisser = "libre"           # Ctrl+glisser : l'image seule, même hors de la fenêtre
+        elif self.molette_redimensionne:
+            # mode adaptatif : la fenêtre suit toujours l'image
+            self._mode_glisser = "ensemble" if self.deborde() else "fenetre"
         elif sur_image and (self.deborde() or not self.couvre_tout()):
             # image zoomée (on la parcourt) ou plus petite que la zone (on la déplace)
             self._mode_glisser = "image"
@@ -597,6 +612,15 @@ class Vue(QWidget):
                     fen.windowHandle().startSystemMove()
                 self._appui = None
                 self._mode_glisser = None
+            elif self._a_glisse and self._mode_glisser == "ensemble":
+                g = e.globalPosition()
+                self.deplacer_ensemble.emit(g - self._appui_global)
+                self._appui_global = g
+            elif self._a_glisse and self._mode_glisser == "libre":
+                self.libre = True
+                self.decalage = self._appui_decalage + delta
+                self._borner()
+                self.update()
             elif self._a_glisse and self._mode_glisser == "image":
                 self.decalage = self._appui_decalage + delta
                 self._borner()

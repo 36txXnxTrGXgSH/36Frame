@@ -76,6 +76,7 @@ Au-dessus : nom, dimensions, rang dans le dossier, et les **miniatures du dossie
 |---|---|
 | Molette sur l'image | mode adaptatif : l'image **et la fenêtre** grandissent / rétrécissent ensemble ; mode PICASA : zoom |
 | `Ctrl+molette` sur l'image | zoom de l'image seule (la fenêtre garde sa taille) |
+| `Ctrl` + glisser l'image | déplace l'image seule, même hors de la fenêtre |
 | Molette sur les miniatures | arrière = image suivante, avant = précédente |
 | Clic sur une miniature | ouvre l'image |
 | Glisser le fond (fenêtré) | déplace la fenêtre |
@@ -146,9 +147,11 @@ seulement si elle est petite) ; la Mosaïque Dossier rend sa mémoire (256 Mo ma
 mosaïque) est mise en pause.
 
 **Mode adaptatif** (par défaut) : la fenêtre épouse l'image — sa taille réelle, sans dépasser 90 % de
-l'écran (réglable) — et se réadapte à chaque image. **Molette** : la fenêtre et l'image grandissent /
-rétrécissent ensemble (zoom en cours pris en compte ; arrivée au bord de l'écran, seule l'image continue).
-**Ctrl+molette** : zoom de l'image seule, la fenêtre garde sa taille. Redimensionner la fenêtre à
+l'écran (réglable) — et se réadapte à chaque image. **Molette** : l'image zoome autour du curseur et la fenêtre
+la suit **toujours**, au zoom comme au dézoom ; quand l'image dépasse de l'écran, la fenêtre en couvre la
+partie visible (glisser l'image la déplace alors avec la fenêtre). **Ctrl+molette** : zoom de l'image
+seule, la fenêtre garde sa taille (le cran de molette suivant la recolle à l'image). **Ctrl+glisser** :
+déplace l'image seule, même en dehors de la fenêtre. Redimensionner la fenêtre à
 la souris agrandit l'image, en gardant ses proportions. Pas de fond : seule l'image est visible.
 La fenêtre change de taille autour de son **bas-centre** et la barre d'outils a une largeur fixe : la
 barre et les miniatures **ne bougent pas** d'une image à l'autre (pratique pour enchaîner à la molette sur
