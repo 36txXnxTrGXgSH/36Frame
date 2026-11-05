@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import math
 
-from PySide6.QtCore import (QEasingCurve, QElapsedTimer, QObject, QPoint, QPointF, QRectF, QRunnable, QSize, QSizeF, Qt,
+from PySide6.QtCore import (QEasingCurve, QElapsedTimer, QEvent, QObject, QPoint, QPointF, QRectF, QRunnable, QSize, QSizeF, Qt,
                             QThreadPool, QTimer, QVariantAnimation, Signal)
 from PySide6.QtGui import QBrush, QColor, QCursor, QFont, QImage, QInputDevice, QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import QWidget
@@ -112,6 +112,11 @@ class Vue(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMouseTracking(True)
+        # écran tactile : pincement à deux doigts (un doigt reste géré comme la souris)
+        self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents)
+        self.grabGesture(Qt.GestureType.PinchGesture)
+        self._pincement = False
+        self._pincement_total = 1.0
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, False)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -579,6 +584,7 @@ class Vue(QWidget):
         self._chrono_appui.start()
         self._tactile = est_tactile(e)
         sur_image = self.rect_image().contains(pos)
+        self._pincement = False
         if self.fige:
             self._mode_glisser = "fige"            # image figée : on ne déplace rien
         elif self._tactile and self.plein_ecran and not self.deborde():
@@ -588,7 +594,8 @@ class Vue(QWidget):
             self._mode_glisser = "libre"           # Ctrl+glisser : l'image seule, même hors de la fenêtre
         elif self.molette_redimensionne:
             # mode adaptatif : la fenêtre suit toujours l'image
-            self._mode_glisser = "ensemble" if self.deborde() else "fenetre"
+            # (au doigt aussi : un déplacement qu'un pincement peut interrompre, contrairement à celui de Windows)
+            self._mode_glisser = "ensemble" if self.deborde() or self._tactile else "fenetre"
         elif sur_image and (self.deborde() or not self.couvre_tout()):
             # image zoomée (on la parcourt) ou plus petite que la zone (on la déplace)
             self._mode_glisser = "image"
@@ -602,7 +609,7 @@ class Vue(QWidget):
     def mouseMoveEvent(self, e):
         pos = e.position()
         self.souris_bouge.emit(pos.toPoint())
-        if self._appui is not None and e.buttons() & Qt.MouseButton.LeftButton:
+        if self._appui is not None and e.buttons() & Qt.MouseButton.LeftButton and not self._pincement:
             delta = pos - self._appui
             if not self._a_glisse and (abs(delta.x()) + abs(delta.y())) >= SEUIL_GLISSER:
                 self._a_glisse = True
@@ -644,6 +651,47 @@ class Vue(QWidget):
     def mouseDoubleClickEvent(self, e):
         if e.button() == Qt.MouseButton.LeftButton and not self.fige and not self._bords(e.position().toPoint()):
             self.double_clic.emit()
+
+    def event(self, e):
+        if e.type() == QEvent.Type.Gesture:
+            g = e.gesture(Qt.GestureType.PinchGesture)
+            if g is not None:
+                self._pincer(g)
+                e.accept()
+                return True
+        return super().event(e)
+
+    def _pincer(self, g):
+        """Deux doigts qui s'écartent : plus grand ; qui se rapprochent : plus petit. En fenêtré
+        (mode adaptatif), la fenêtre suit l'image, comme à la molette."""
+        etat = g.state()
+        if etat == Qt.GestureState.GestureStarted:
+            self._pincement = True
+            self._pincement_total = 1.0
+            self._a_glisse = True                    # pas de « clic » au moment où les doigts se lèvent
+            self._mode_glisser = None
+            return
+        if not self._pincement or self.fige:
+            return
+        total = g.totalScaleFactor()
+        if total > 0:
+            facteur = total / self._pincement_total
+            self._pincement_total = total
+            if abs(facteur - 1) > 1e-3:
+                ancre = QPointF(self.mapFromGlobal(g.centerPoint().toPoint()))
+                if self.molette_redimensionne:
+                    self.molette_fenetre.emit(facteur, ancre)
+                else:
+                    self._anim.stop()
+                    self.auto = False
+                    self._appliquer_zoom(max(ZOOM_MIN, min(ZOOM_MAX, self.zoom * facteur)), ancre)
+                    self._montrer_pct(self.zoom)
+                    self.zoom_change.emit(self.zoom)
+                    self.update()
+        if etat in (Qt.GestureState.GestureFinished, Qt.GestureState.GestureCanceled):
+            self._pincement = False
+            self._lisse = None
+            self._minuteur_lisse.start()
 
     def wheelEvent(self, e):
         # angleDelta : 120 par cran ; les molettes fines et pavés tactiles envoient moins, en continu

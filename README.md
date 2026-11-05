@@ -86,6 +86,8 @@ Au-dessus : nom, dimensions, rang dans le dossier, et les **miniatures du dossie
 | Double-clic / F11 / Entrée | plein écran ⇄ fenêtré |
 | Clic sur le fond en plein écran | retour en fenêtré |
 | Balayage au doigt (écran tactile) en plein écran | vers la gauche = image suivante, vers la droite = précédente |
+| Deux doigts qui s'écartent / se rapprochent (écran tactile) | l'image **et la fenêtre** grandissent / rétrécissent (en plein écran : zoom de l'image) |
+| Glisser un doigt (fenêtré) | déplace la fenêtre et l'image |
 | Clic droit | menu des options (dont « Taille d'origine / ajuster » et « Ajuster la fenêtre à la taille de l'image ») |
 | Clic molette (ou Ctrl+clic) sur une miniature | ouvre l'image dans une nouvelle fenêtre |
 | Clic droit sur ★ | ranger l'image dans un dossier de favoris |
