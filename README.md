@@ -110,7 +110,9 @@ ou pêle-mêle. Une fenêtre n'est jamais agrandie au-delà de la taille réelle
 écran, en rangées ajustées (proportions respectées, espace entre chaque), en commençant par l'image
 ouverte. Molette arrière / avant : la suite / le début du dossier, en défilement continu et amorti
 (accélère et ralentit en douceur ; « Douceur du défilement » réglable dans Configuration).
-`Ctrl+molette` (ou `+` `-`) : images plus grandes ou plus petites (nombre de rangées, mémorisé).
+`Ctrl+molette` (ou `+` `-`) : images plus grandes ou plus petites (nombre de rangées, mémorisé), par crans
+de 20 %, jusqu'à **une image par rangée** sur toute la hauteur de l'écran. Aucune image n'est rapetissée
+pour remplir une rangée : une rangée incomplète est centrée.
 Clic sur une image : elle s'ouvre dans la liseuse ; clic molette : nouvelle fenêtre ;
 clic sur le fond ou `Échap` : retour.
 **Écran tactile** : le contenu suit le doigt ; un balayage rapide vers la gauche avance d'un écran, vers la droite

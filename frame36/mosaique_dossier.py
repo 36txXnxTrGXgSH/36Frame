@@ -25,7 +25,9 @@ from .chargement import charger_apercu, dimensions, est_anime
 from .vue import SuiviPincement, est_tactile, sens_balayage
 
 PALIERS = (160, 240, 320, 400, 480, 640, 800, 960, 1280, 1600, 1920, 2560)   # hauteurs de décodage
-RANGEES_MIN, RANGEES_MAX = 1.2, 10.0
+RANGEES_MIN, RANGEES_MAX = 1.0, 10.0
+CRAN = 1.2              # un cran de zoom (Ctrl+molette, +/-) : rangées ÷ ou × 1,2
+JUSTIFIER = 1.25        # rangée justifiée si ses images grandissent de 25 % au plus
 MARGE_BOUT = 16          # marge au début et à la fin du défilement
 BUDGET = 256 * 1024 ** 2
 
@@ -262,8 +264,8 @@ class MosaiqueDossier(QWidget):
                            (["Space"], self.basculer_panorama),
                            (["Home"], lambda: self.aller_a(0)),
                            (["End"], lambda: self.aller_a(self.longueur_totale)),
-                           (["+", "=", "Ctrl++"], lambda: self.changer_rangees(-1)),
-                           (["-", "Ctrl+-"], lambda: self.changer_rangees(1)),
+                           (["+", "=", "Ctrl++"], lambda: self.zoomer(1)),
+                           (["-", "Ctrl+-"], lambda: self.zoomer(-1)),
                            (["Delete"], lambda: self.supprimer(self._survol))):
             for t in touches:
                 QShortcut(QKeySequence(t), self, f)
@@ -298,29 +300,42 @@ class MosaiqueDossier(QWidget):
         return (self._vue() - MARGE_BOUT * 2 - m * (n - 1)) / n
 
     def disposer(self):
-        """Rangées « justifiées » : chaque rangée pleine remplit exactement la largeur (ou la hauteur)."""
+        """Rangées d'images de même hauteur : JAMAIS plus petites que la taille demandée.
+        Une rangée presque pleine est justifiée (ses images grandissent un peu pour remplir la
+        largeur) ; sinon elle est centrée, avec de l'espace sur les côtés."""
         m = self._marge()
         T = self._travers() - 2 * m
         cible = self._epaisseur_cible()
+        emax = max(cible, self._vue() - 2 * MARGE_BOUT)     # une rangée tient toujours à l'écran
         self.rangees = []
         p = MARGE_BOUT
         ligne, somme = [], 0.0
         for i in range(len(self.ratios)):
-            ligne.append(i)
-            somme += self._ratio(i)
-            e = (T - m * (len(ligne) - 1)) / somme
-            if e <= cible:
-                self._ajouter_rangee(ligne, e, p, m, justifiee=True)
-                p += e + m
+            r = self._ratio(i)
+            # avec cette image, la rangée deviendrait plus basse que voulu : on la pose sans elle
+            if ligne and (T - m * len(ligne)) / (somme + r) < cible:
+                p = self._poser(ligne, somme, T, m, cible, emax, p)
                 ligne, somme = [], 0.0
-        if ligne:   # dernière rangée incomplète : épaisseur normale, centrée
-            self._ajouter_rangee(ligne, cible, p, m, justifiee=False)
-            p += cible + m
+            ligne.append(i)
+            somme += r
+        if ligne:
+            p = self._poser(ligne, somme, T, m, cible, emax, p, derniere=True)
         self.longueur_totale = p - m + MARGE_BOUT
         # tout tient à l'écran : on centre plutôt que de laisser un grand vide
         if self.longueur_totale < self._vue():
             dp = (self._vue() - self.longueur_totale) / 2
             self.rangees = [(p + dp, e, el) for p, e, el in self.rangees]
+
+    def _poser(self, ligne, somme, T, m, cible, emax, p, derniere=False) -> float:
+        juste = (T - m * (len(ligne) - 1)) / somme        # épaisseur qui remplit toute la largeur
+        if juste < cible:                                  # image seule trop large (panorama)
+            e, justifiee = juste, True
+        elif juste <= cible * JUSTIFIER and not derniere and juste <= emax:
+            e, justifiee = juste, True
+        else:
+            e, justifiee = min(cible, emax), False
+        self._ajouter_rangee(ligne, e, p, m, justifiee)
+        return p + e + m
 
     def _ajouter_rangee(self, ligne, e, p, m, justifiee):
         longueur = sum(self._ratio(i) * e for i in ligne) + m * (len(ligne) - 1)
@@ -409,6 +424,12 @@ class MosaiqueDossier(QWidget):
             if p + e > self.defilement:
                 return el[0][0]
         return -1
+
+    def zoomer(self, sens: int, ancre: QPointF | None = None):
+        """Un cran : images plus grandes (sens > 0) ou plus petites. Crans proportionnels :
+        fins dans les gros zooms (1,7 → 1,44 → 1,2 → 1), où chaque cran se voit beaucoup."""
+        n = self.config.mosaique_dossier_rangees
+        self.changer_rangees((n / CRAN if sens > 0 else n * CRAN) - n, ancre)
 
     def changer_rangees(self, delta: float, ancre: QPointF | None = None, enregistrer: bool = True):
         """Plus ou moins de rangées à l'écran, en gardant l'image sous le curseur en place."""
@@ -708,7 +729,7 @@ class MosaiqueDossier(QWidget):
             return
         if e.modifiers() & Qt.KeyboardModifier.ControlModifier:
             # Ctrl+molette : images plus grandes (avant) ou plus petites (arrière)
-            self.changer_rangees(-0.5 if d > 0 else 0.5, e.position())
+            self.zoomer(1 if d > 0 else -1, e.position())
         else:
             # molette vers l'arrière = la suite du dossier, vers l'avant = retour vers le début
             self.defiler(-d / 120 * self._epaisseur_cible() * 0.4)
@@ -818,8 +839,8 @@ class MosaiqueDossier(QWidget):
         sens = m.addAction("Défilement horizontal" if not self.horizontal else "Défilement vertical",
                            self.changer_orientation)
         sens.setToolTip("Réglable aussi dans Configuration")
-        m.addAction("Images plus grandes\t+", lambda: self.changer_rangees(-0.5))
-        m.addAction("Images plus petites\t-", lambda: self.changer_rangees(0.5))
+        m.addAction("Images plus grandes\t+", lambda: self.zoomer(1))
+        m.addAction("Images plus petites\t-", lambda: self.zoomer(-1))
         m.addSeparator()
         m.addAction("Quitter la mosaïque\tÉchap", self.close)
         m.exec(pos)

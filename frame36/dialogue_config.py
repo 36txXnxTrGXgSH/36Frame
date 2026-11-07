@@ -165,7 +165,7 @@ class DialogueConfig(QDialog):
         f5.addRow("Mosaïque :", self.mosaique)
         f5.addRow("Espace entre les fenêtres :", self.marge)
         self.rangees = QDoubleSpinBox()
-        self.rangees.setRange(1.2, 10)
+        self.rangees.setRange(1.0, 10)
         self.rangees.setSingleStep(0.5)
         self.rangees.setDecimals(1)
         self.rangees.setValue(config.mosaique_dossier_rangees)
