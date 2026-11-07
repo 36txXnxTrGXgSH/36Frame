@@ -22,7 +22,7 @@ from PySide6.QtWidgets import QHBoxLayout, QMenu, QToolTip, QWidget
 from . import actions, veille
 from .barre import Bouton, _Panneau
 from .chargement import charger_apercu, dimensions, est_anime
-from .vue import est_tactile, sens_balayage
+from .vue import SuiviPincement, est_tactile, sens_balayage
 
 PALIERS = (160, 240, 320, 400, 480, 640, 800, 960, 1280, 1600, 1920, 2560)   # hauteurs de décodage
 RANGEES_MIN, RANGEES_MAX = 1.2, 10.0
@@ -215,6 +215,10 @@ class MosaiqueDossier(QWidget):
         self._tactile = False                 # appui au doigt (écran tactile)
         self._defil_appui = 0.0
         self._chrono_appui = QElapsedTimer()
+        self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents)
+        self._pincement = False                # deux doigts : images plus grandes / plus petites
+        self._suivi_pincement = SuiviPincement(self, self._debut_pincement, self._pas_pincement,
+                                               self._fin_pincement)
         self._ferme = False
         self._panorama_actif = False
 
@@ -406,10 +410,10 @@ class MosaiqueDossier(QWidget):
                 return el[0][0]
         return -1
 
-    def changer_rangees(self, delta: float, ancre: QPointF | None = None):
+    def changer_rangees(self, delta: float, ancre: QPointF | None = None, enregistrer: bool = True):
         """Plus ou moins de rangées à l'écran, en gardant l'image sous le curseur en place."""
         n = max(RANGEES_MIN, min(RANGEES_MAX, self.config.mosaique_dossier_rangees + delta))
-        if n == self.config.mosaique_dossier_rangees:
+        if abs(n - self.config.mosaique_dossier_rangees) < 1e-6:
             return
         ancre = ancre or QPointF(self.width() / 2, self.height() / 2)
         i = self._element_en(ancre)
@@ -417,7 +421,8 @@ class MosaiqueDossier(QWidget):
             i = self._index_au_debut()
         avant = self._debut(i) if i >= 0 else 0
         self.config.mosaique_dossier_rangees = n
-        self.config.enregistrer()
+        if enregistrer:
+            self.config.enregistrer()
         self.disposer()
         if i >= 0:
             self.aller_a(self.defilement + (self._debut(i) - avant), anime=False)
@@ -730,7 +735,30 @@ class MosaiqueDossier(QWidget):
                 QToolTip.hideText()
             self.update()
 
+    def showEvent(self, e):
+        super().showEvent(e)
+        self._suivi_pincement.installer()
+
+    # ------------------------------------------------------------------ pincement (écran tactile)
+    def _debut_pincement(self):
+        self._pincement = True
+        self._appui = None                     # ni défilement au doigt, ni clic sur une image
+        self._tactile = False
+        if self._panorama_actif:
+            self.arreter_panorama()
+
+    def _pas_pincement(self, facteur: float, centre: QPointF):
+        """Doigts qui s'écartent : images plus grandes (moins de rangées), et inversement."""
+        n = self.config.mosaique_dossier_rangees
+        self.changer_rangees(n / facteur - n, QPointF(self.mapFromGlobal(centre.toPoint())), enregistrer=False)
+
+    def _fin_pincement(self):
+        self._pincement = False
+        self.config.enregistrer()
+
     def mousePressEvent(self, e):
+        if self._pincement:
+            return                             # clic simulé par Windows au milieu d'un pincement
         self._appui = e.position()
         self._tactile = est_tactile(e) and e.button() == Qt.MouseButton.LeftButton
         self._defil_appui = self.defilement

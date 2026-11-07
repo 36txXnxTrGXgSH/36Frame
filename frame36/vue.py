@@ -14,7 +14,8 @@ import math
 
 from PySide6.QtCore import (QEasingCurve, QElapsedTimer, QEvent, QObject, QPoint, QPointF, QRectF, QRunnable, QSize, QSizeF, Qt,
                             QThreadPool, QTimer, QVariantAnimation, Signal)
-from PySide6.QtGui import QBrush, QColor, QCursor, QFont, QImage, QInputDevice, QPainter, QPixmap, QTransform
+from PySide6.QtGui import (QBrush, QColor, QCursor, QEventPoint, QFont, QImage, QInputDevice, QPainter, QPixmap,
+                           QTransform)
 from PySide6.QtWidgets import QWidget
 
 ZOOM_MIN, ZOOM_MAX = 0.01, 40.0
@@ -99,6 +100,55 @@ def sens_balayage(delta: QPointF, duree_ms: int, seuil: float = 70) -> int:
     return 1 if delta.x() < 0 else -1
 
 
+class SuiviPincement(QObject):
+    """Pincement à deux doigts, mesuré sur la position réelle des doigts à l'écran.
+
+    Observé au niveau de la fenêtre (QWindow) : on y reçoit tous les contacts, même ceux que le
+    widget laisse convertir en souris (un doigt = clic, glisser, balayage). Le geste « pinch » de Qt
+    ne convient pas ici : Windows envoie un clic simulé au milieu du geste, et son facteur cumulé
+    dérive. Positions globales : la fenêtre peut bouger et grandir sous les doigts sans fausser
+    le calcul. debut() / pas(facteur, centre_global) / fin()."""
+
+    _TOUCHER = (QEvent.Type.TouchBegin, QEvent.Type.TouchUpdate, QEvent.Type.TouchEnd, QEvent.Type.TouchCancel)
+
+    def __init__(self, widget: QWidget, debut, pas, fin):
+        super().__init__(widget)
+        self._widget = widget
+        self._debut, self._pas, self._fin = debut, pas, fin
+        self._fenetre = None
+        self._ids = None
+        self._distance = 0.0
+        self.actif = False
+
+    def installer(self):
+        h = self._widget.window().windowHandle()      # (un widget enfant n'a pas de QWindow à lui)
+        if h is not None and h is not self._fenetre:
+            h.installEventFilter(self)
+            self._fenetre = h
+
+    def eventFilter(self, objet, e):
+        t = e.type()
+        if t in self._TOUCHER:
+            poses = [] if t in (QEvent.Type.TouchEnd, QEvent.Type.TouchCancel) else                 [p for p in e.points() if p.state() != QEventPoint.State.Released]
+            if len(poses) >= 2:
+                a, b = poses[0].globalPosition(), poses[1].globalPosition()
+                d = math.hypot(a.x() - b.x(), a.y() - b.y())
+                ids = (poses[0].id(), poses[1].id())
+                if not self.actif:
+                    self.actif = True
+                    self._debut()
+                if ids != self._ids or self._distance < 1:
+                    self._ids, self._distance = ids, d       # nouveaux doigts : nouvelle référence
+                elif d >= 1 and abs(d / self._distance - 1) > 0.003:
+                    facteur, self._distance = d / self._distance, d
+                    self._pas(facteur, (a + b) / 2)
+            elif self.actif:
+                self.actif = False
+                self._ids = None
+                self._fin()
+        return False
+
+
 class Vue(QWidget):
     zoom_change = Signal(float)
     molette_fenetre = Signal(float, QPointF)  # molette (mode adaptatif) : la fenêtre et l'image ensemble
@@ -114,9 +164,8 @@ class Vue(QWidget):
         self.setMouseTracking(True)
         # écran tactile : pincement à deux doigts (un doigt reste géré comme la souris)
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents)
-        self.grabGesture(Qt.GestureType.PinchGesture)
         self._pincement = False
-        self._pincement_total = 1.0
+        self._suivi_pincement = SuiviPincement(self, self._debut_pincement, self._pas_pincement, self._fin_pincement)
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, False)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -584,7 +633,8 @@ class Vue(QWidget):
         self._chrono_appui.start()
         self._tactile = est_tactile(e)
         sur_image = self.rect_image().contains(pos)
-        self._pincement = False
+        if self._pincement:
+            return                                 # clic simulé par Windows au milieu d'un pincement
         if self.fige:
             self._mode_glisser = "fige"            # image figée : on ne déplace rien
         elif self._tactile and self.plein_ecran and not self.deborde():
@@ -652,46 +702,37 @@ class Vue(QWidget):
         if e.button() == Qt.MouseButton.LeftButton and not self.fige and not self._bords(e.position().toPoint()):
             self.double_clic.emit()
 
-    def event(self, e):
-        if e.type() == QEvent.Type.Gesture:
-            g = e.gesture(Qt.GestureType.PinchGesture)
-            if g is not None:
-                self._pincer(g)
-                e.accept()
-                return True
-        return super().event(e)
+    def showEvent(self, e):
+        super().showEvent(e)
+        self._suivi_pincement.installer()
 
-    def _pincer(self, g):
+    # ------------------------------------------------------------------ pincement (écran tactile)
+    def _debut_pincement(self):
+        self._pincement = True
+        self._appui = None                       # le doigt posé en premier ne déplace plus rien
+        self._mode_glisser = None
+        self._a_glisse = True                    # pas de « clic » quand les doigts se lèvent
+        self._anim.stop()
+
+    def _pas_pincement(self, facteur: float, centre: QPointF):
         """Deux doigts qui s'écartent : plus grand ; qui se rapprochent : plus petit. En fenêtré
         (mode adaptatif), la fenêtre suit l'image, comme à la molette."""
-        etat = g.state()
-        if etat == Qt.GestureState.GestureStarted:
-            self._pincement = True
-            self._pincement_total = 1.0
-            self._a_glisse = True                    # pas de « clic » au moment où les doigts se lèvent
-            self._mode_glisser = None
+        if self.fige or self._taille_image().isEmpty():
             return
-        if not self._pincement or self.fige:
-            return
-        total = g.totalScaleFactor()
-        if total > 0:
-            facteur = total / self._pincement_total
-            self._pincement_total = total
-            if abs(facteur - 1) > 1e-3:
-                ancre = QPointF(self.mapFromGlobal(g.centerPoint().toPoint()))
-                if self.molette_redimensionne:
-                    self.molette_fenetre.emit(facteur, ancre)
-                else:
-                    self._anim.stop()
-                    self.auto = False
-                    self._appliquer_zoom(max(ZOOM_MIN, min(ZOOM_MAX, self.zoom * facteur)), ancre)
-                    self._montrer_pct(self.zoom)
-                    self.zoom_change.emit(self.zoom)
-                    self.update()
-        if etat in (Qt.GestureState.GestureFinished, Qt.GestureState.GestureCanceled):
-            self._pincement = False
-            self._lisse = None
-            self._minuteur_lisse.start()
+        ancre = QPointF(self.mapFromGlobal(centre.toPoint()))
+        if self.molette_redimensionne:
+            self.molette_fenetre.emit(facteur, ancre)
+        else:
+            self.auto = False
+            self._appliquer_zoom(max(ZOOM_MIN, min(ZOOM_MAX, self.zoom * facteur)), ancre)
+            self._montrer_pct(self.zoom)
+            self.zoom_change.emit(self.zoom)
+            self.update()
+
+    def _fin_pincement(self):
+        self._pincement = False
+        self._lisse = None
+        self._minuteur_lisse.start()
 
     def wheelEvent(self, e):
         # angleDelta : 120 par cran ; les molettes fines et pavés tactiles envoient moins, en continu

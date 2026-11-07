@@ -114,7 +114,8 @@ ouverte. Molette arrière / avant : la suite / le début du dossier, en défilem
 Clic sur une image : elle s'ouvre dans la liseuse ; clic molette : nouvelle fenêtre ;
 clic sur le fond ou `Échap` : retour.
 **Écran tactile** : le contenu suit le doigt ; un balayage rapide vers la gauche avance d'un écran, vers la droite
-recule d'un écran (en défilement vertical, un balayage vers le haut / le bas fonctionne aussi). Seules les images visibles sont chargées, à la taille d'affichage.
+recule d'un écran (en défilement vertical, un balayage vers le haut / le bas fonctionne aussi).
+Deux doigts qui s'écartent : images plus grandes (moins de rangées) ; qui se rapprochent : plus petites. Seules les images visibles sont chargées, à la taille d'affichage.
 Défilement **vertical** (rangées) ou **horizontal** (colonnes) : Configuration, ou clic droit dans la mosaïque.
 **Panorama** : bouton en bas au centre (visible au survol) ou `Espace` : les images défilent toutes
 seules ; vitesse réglable dans Configuration (secondes par écran), reprend au début si « Recommencer »
