@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>36Frame — la liseuse d'images inspirée de Picasa, pour Windows</title>
-<meta name="description" content="36Frame : une liseuse d'images légère pour Windows, inspirée de Picasa. La fenêtre épouse l'image, zoom fluide, Mosaïque Dossier, GIF et WebP animés, images détourées, plusieurs fenêtres. Sans compte, sans connexion internet.">
+<meta name="description" content="36Frame : une liseuse d'images légère pour Windows, inspirée de Picasa. La fenêtre épouse l'image, zoom fluide, écran tactile (pincement, balayage), Mosaïque Dossier, GIF et WebP animés, images détourées, aperçu avant impression, plusieurs fenêtres. Sans compte, sans connexion internet.">
 <meta property="og:title" content="36Frame — la liseuse d'images inspirée de Picasa">
-<meta property="og:description" content="La fenêtre épouse l'image, zoom fluide, Mosaïque Dossier, GIF et WebP animés. Pour Windows, en français, sans internet.">
+<meta property="og:description" content="La fenêtre épouse l'image, zoom fluide à la molette ou aux doigts, Mosaïque Dossier, GIF et WebP animés. Pour Windows, en français, sans internet.">
 <meta property="og:image" content="https://36txxnxtrgxgsh.github.io/36Frame/images/01-accueil.png">
 <style>
   :root {
@@ -111,14 +111,15 @@
     <div class="marque">36Frame</div>
     <h1>La liseuse d'images inspirée de Picasa, pour Windows</h1>
     <p class="accroche">Double-cliquez sur une photo : la fenêtre prend la taille de l'image, rien de plus.
-      Une barre d'outils discrète, un zoom fluide, tout un dossier en mosaïque, les GIF et WebP animés,
-      les images détourées posées sur votre bureau. Léger, en français, et sans jamais se connecter à internet.</p>
+      Une barre d'outils discrète, un zoom fluide à la molette ou aux doigts, tout un dossier en mosaïque,
+      les GIF et WebP animés, les images détourées posées sur votre bureau. Léger, en français, et sans jamais se connecter à internet.</p>
     <div class="boutons">
       <a class="bouton plein" href="https://github.com/36txXnxTrGXgSH/36Frame/releases/latest">Télécharger pour Windows</a>
       <a class="bouton contour" href="https://github.com/36txXnxTrGXgSH/36Frame">Voir le code source</a>
     </div>
     <ul class="pastilles">
       <li>JPEG · PNG · WebP · GIF · AVIF · TIFF · BMP · PSD · SVG…</li>
+      <li>Écran tactile</li>
       <li>Aucune connexion internet</li>
       <li>Sans compte</li>
       <li>Installation sans droits administrateur</li>
@@ -159,12 +160,23 @@
       <h2>Un zoom fluide et précis</h2>
       <p class="chapeau">Même une photo de 40 millions de pixels se zoome sans à-coup.</p>
       <ul class="points">
-        <li>Zoom autour du curseur, animé, 12 % par cran (<kbd>Ctrl</kbd> + molette, ou molette en mode PICASA).</li>
+        <li>Zoom autour du curseur, 12 % par cran : la fenêtre suit l'image ; <kbd>Ctrl</kbd> + molette pour zoomer dans la fenêtre sans la changer.</li>
         <li>Une pastille affiche le pourcentage : <strong>100 % = un pixel de l'image pour un pixel de l'écran</strong>, même avec la mise à l'échelle Windows à 125 ou 150 %.</li>
         <li><kbd>1:1</kbd> pour la taille réelle, un second appui pour revenir à l'ajustement.</li>
-        <li>Glissez l'image pour la parcourir quand elle est zoomée.</li>
-        <li><strong>Écran tactile</strong> : écartez ou rapprochez deux doigts pour agrandir ou rétrécir l'image et la fenêtre ; en plein écran, balayez vers la gauche ou la droite pour passer à l'image suivante ou précédente.</li>
+        <li>Glissez l'image pour la parcourir quand elle est zoomée ; <kbd>Ctrl</kbd> + glisser la déplace seule, même hors de la fenêtre.</li>
       </ul>
+    </div>
+  </div>
+</section>
+
+<section id="tactile">
+  <div class="page">
+    <h2>Aux doigts, sur un écran tactile</h2>
+    <p class="chapeau">Tablette, PC hybride, écran tactile : 36Frame se pilote aussi au doigt.</p>
+    <div class="cartes">
+      <div class="carte"><h3>Pincer pour zoomer</h3><p>Écartez deux doigts : l'image <em>et la fenêtre</em> grandissent, en continu, aussi longtemps que vous écartez. Rapprochez-les : elles rétrécissent. En plein écran, l'image zoome sous vos doigts.</p></div>
+      <div class="carte"><h3>Balayer pour changer d'image</h3><p>En plein écran, un balayage vers la gauche passe à l'image suivante, vers la droite à la précédente. Un doigt posé sur la fenêtre la déplace.</p></div>
+      <div class="carte"><h3>Mosaïque Dossier au doigt</h3><p>Le dossier défile sous le doigt, un balayage avance ou recule d'un écran, et un pincement agrandit ou rétrécit les vignettes.</p></div>
     </div>
   </div>
 </section>
@@ -286,7 +298,7 @@
 <section id="telecharger">
   <div class="page">
     <h2>Télécharger</h2>
-    <p class="chapeau">Windows 10 ou 11, 64 bits. Dans la page <a href="https://github.com/36txXnxTrGXgSH/36Frame/releases/latest">Releases</a> :</p>
+    <p class="chapeau">Version actuelle : <strong>1.2.1</strong>. Windows 10 ou 11, 64 bits. Dans la page <a href="https://github.com/36txXnxTrGXgSH/36Frame/releases/latest">Releases</a> :</p>
     <table>
       <tr><th>Fichier</th><th>Pour qui</th></tr>
       <tr><td><code>36Frame-Setup-x.y.z.exe</code></td><td>Installation classique (sans droits administrateur). Propose de faire de 36Frame la visionneuse par défaut.</td></tr>
