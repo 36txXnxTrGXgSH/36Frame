@@ -57,6 +57,7 @@
     font-size: 14px; color: var(--texte-2);
     border: 1px solid var(--trait); border-radius: 999px; padding: 5px 12px;
   }
+  .legende-video { margin: 12px 0 0; text-align: center; color: var(--texte-2); font-size: .95rem; }
   .ecran {
     display: block; width: 100%; height: auto;
     border-radius: 14px; border: 1px solid var(--trait);
@@ -126,8 +127,13 @@
       <li>Version portable</li>
       <li>En français</li>
     </ul>
-    <img class="ecran" src="images/01-accueil.png" width="1600" height="900"
-         alt="36Frame affiche un paysage : la fenêtre a exactement la taille de l'image, la barre d'outils et les miniatures du dossier apparaissent en bas">
+    <video class="ecran" controls preload="metadata" playsinline width="1600" height="900"
+           poster="video/affiche.jpg" aria-label="Vidéo de présentation de 36Frame (1 min 13, en français, sous-titrée)">
+      <source src="video/36Frame-presentation.mp4" type="video/mp4">
+      <img src="images/01-accueil.png" width="1600" height="900"
+           alt="36Frame affiche un paysage : la fenêtre a exactement la taille de l'image, la barre d'outils et les miniatures du dossier apparaissent en bas">
+    </video>
+    <p class="legende-video">▶ La présentation en 1 min 13 : chaque fonction et son raccourci (voix de synthèse, sous-titrée).</p>
   </div>
 </header>
 

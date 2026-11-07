@@ -9,6 +9,10 @@ Python 3 + PySide6 (Qt 6). En français, réalisé avec Claude.
 
 ## Présentation
 
+🎬 **[Vidéo de présentation (1 min 13)](https://36txxnxtrgxgsh.github.io/36Frame/video/36Frame-presentation.mp4)** : chaque fonction et son raccourci, en français, sous-titrée.
+
+[![Vidéo de présentation de 36Frame](docs/video/affiche.jpg)](https://36txxnxtrgxgsh.github.io/36Frame/video/36Frame-presentation.mp4)
+
 ![La liseuse : la fenêtre épouse l'image, barre d'outils et miniatures du dossier au survol](docs/captures/liseuse.jpg)
 
 ![Mosaïque Dossier : toutes les images du dossier en rangées ajustées, défilement à la molette ou en Panorama](docs/captures/mosaique-dossier.jpg)
